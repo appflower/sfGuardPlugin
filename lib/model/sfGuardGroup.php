@@ -17,4 +17,8 @@
  */
 class sfGuardGroup extends PluginsfGuardGroup
 {
+	public function getHtmlName()
+    {
+        return '<a class="widgetLoad" href="'.sfContext::getInstance()->getController()->genUrl('/sfGuardGroup/edit?id='.$this->getId(), true).'"> '.$this->getName().' </a>';
+    }
 }

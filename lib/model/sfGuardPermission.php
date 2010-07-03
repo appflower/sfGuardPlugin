@@ -17,4 +17,8 @@
  */
 class sfGuardPermission extends PluginsfGuardPermission
 {
+	public function getHtmlName()
+    {
+        return '<a href="'.sfContext::getInstance()->getController()->genUrl('/sfGuardPermission/edit?id='.$this->getId(), true).'" class="widgetLoad"> '.$this->getName().' </a>';
+    }
 }
