@@ -87,8 +87,10 @@ class sfGuardUser extends PluginsfGuardUser {
 			$c->add(ProjectUserPeer::USER_ID, $this->getId());
 			$c->add(ProjectUserPeer::PROJECT_ID, $projectId);
 			foreach(ProjectUserPeer::doSelect($c) as $obj) {
-				$out.=empty($out) ? '' : ', ';
-				$out.=$obj->getProjectRole()->getName();
+				if($obj->getProjectRole()!=null) {
+					$out.=empty($out) ? '' : ', ';
+					$out.=$obj->getProjectRole()->getName();
+				}
 			}
 		}else {
 			$c = new Criteria();
