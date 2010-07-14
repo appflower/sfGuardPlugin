@@ -32,6 +32,37 @@ class sfGuardUserPeer extends PluginsfGuardUserPeer
 		}
 		else return array();		
 	}
+
+        public static function getAllNotAssignedForProject($project_id, $user_id)
+        {
+                $c2 = new Criteria();
+                $c2->add(ProjectUserPeer::PROJECT_ID, $project_id);
+                if($user_id != null) {//we want to see user while edit
+                    $c2->add(ProjectUserPeer::USER_ID, $user_id, Criteria::NOT_EQUAL);
+                }
+	        $projectUsers = ProjectUserPeer::doSelect($c2);
+	        $projectUserIds = array();
+	        if($projectUsers != null) {
+	            foreach ($projectUsers as $projectUser) {
+	                $projectUserIds[] = $projectUser->getUserId();
+	            }
+	        }
+
+                $c1 = new Criteria();
+	        $c1->addAnd(self::ID, $projectUserIds, Criteria::NOT_IN);
+		$objects=self::doSelect($c1);
+
+		if($objects!=null)
+		{
+			foreach ($objects as $object)
+			{
+				$array[$object->getId()]=$object->getFirstName().' '.$object->getLastName();
+			}
+
+			return $array;
+		}
+		else return array();	
+        }
 	
 	public static function getAllUsers()
 	{
@@ -157,4 +188,15 @@ class sfGuardUserPeer extends PluginsfGuardUserPeer
             }
 
 	}
+
+        public static function areNotAssignedForProject($project_id)
+        {
+            $users = self::getAllNotAssignedForProject($project_id, null);
+
+            if($users!=null) {
+                return true;
+            } else {
+                return false;
+            }
+        }
 }
