@@ -125,5 +125,30 @@ class sfGuardUser extends PluginsfGuardUser {
 
         return $out;
     }
-
+    
+	public function getProjectsByUserRole($c, $owner=true)
+    {
+    	$c1 = new Criteria();
+    	if($owner)
+    		$c1->add(ProjectRolePeer::PROJECT_OWNER_ROLE, 1);
+    	else
+    		$c1->add(ProjectRolePeer::PROJECT_OWNER_ROLE, 1, Criteria::NOT_EQUAL);
+    	
+    	$project_roles = array();
+    	foreach(ProjectRolePeer::doSelect($c1) as $pr){
+    		$project_roles[] = $pr->getId();
+    	}
+    	
+    	$c2 = new Criteria();
+    	$c2->add(ProjectUserPeer::PROJECT_ROLE_ID, $project_roles, Criteria::IN);
+    	$c2->add(ProjectUserPeer::USER_ID, $this->getId());
+    	$project_ids = array();
+    	foreach(ProjectUserPeer::doSelect($c2) as $pu){
+    		$project_ids[] = $pu->getProjectId();
+    	}
+    	
+    	$c->add(ProjectPeer::ID, $project_ids, Criteria::IN);
+    	
+    	return ProjectPeer::doSelect($c);
+    }
 }
