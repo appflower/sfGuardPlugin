@@ -79,33 +79,50 @@ class sfGuardUser extends PluginsfGuardUser {
         }
     }
     
-	public function getProjectRole() {
-		$out = '';
-		$projectId=sfContext::getInstance()->getUser()->hasAttribute('projectId','/appflower')?sfContext::getInstance()->getUser()->getAttribute('projectId',false,'/appflower'):false;
-		if($projectId) {
-		$c = new Criteria();
-			$c->add(ProjectUserPeer::USER_ID, $this->getId());
-			$c->add(ProjectUserPeer::PROJECT_ID, $projectId);
-			foreach(ProjectUserPeer::doSelect($c) as $obj) {
-				if($obj->getProjectRole()!=null) {
-					$out.=empty($out) ? '' : ', ';
-					$out.=$obj->getProjectRole()->getName();
-				}
-			}
-		}else {
-			$c = new Criteria();
-			$c->add(ProjectPeer::OWNER_ID, $this->getId());
-			foreach(ProjectPeer::doSelect($c) as $obj) {
-				$out.=empty($out) ? '' : ', ';
-				$out.='Owner/'.$obj->getName();
-			}
-			$c = new Criteria();
-			$c->add(ProjectUserPeer::USER_ID, $this->getId());
-			foreach(ProjectUserPeer::doSelect($c) as $obj) {
-				$out.=empty($out) ? '' : ', ';
-				$out.='Member/'.$obj->getProject()->getName();
-			}
-		}
+    public function getProjectRole()
+    {
+        $out = '';
+        $projectId = sfContext::getInstance()->getUser()->hasAttribute('projectId','/appflower') ? sfContext::getInstance()->getUser()->getAttribute('projectId',false,'/appflower') : false;
+        
+        $c = new Criteria();
+        $c->addSelectColumn(ProjectPeer::NAME);
+        $c->addSelectColumn(ProjectRolePeer::PROJECT_OWNER_ROLE);
+        $c->add(ProjectUserPeer::USER_ID, $this->getId());
+        if($projectId) {
+            $c->add(ProjectUserPeer::PROJECT_ID, $projectId);
+        }
+        $c->addJoin(ProjectUserPeer::PROJECT_ID, ProjectPeer::ID);
+        $c->addjoin(ProjectUserPeer::PROJECT_ROLE_ID, ProjectRolePeer::ID);
+
+        $stmt = ProjectPeer::doSelectStmt($c);
+
+        $projectUsers = array();
+
+        $i = 0;
+        while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
+            $projectUsers[$i]['name'] = $row[0];
+            $projectUsers[$i]['is_owner'] = $row[1];
+
+            $i++;
+        }
+
+        foreach($projectUsers as $row)
+        {
+            if($projectId) {
+                $projectName = '';
+            } else {
+                $projectName = '/'.$row['name'];
+            }
+            
+            $out.=empty($out) ? '' : ', ';
+
+            if($row['is_owner']) {
+                $out.='Owner'.$projectName;
+            } else {
+                $out.='Member'.$projectName;
+            }
+        }
+
         return $out;
     }
 
