@@ -36,6 +36,7 @@ class sfGuardUserPeer extends PluginsfGuardUserPeer
         public static function getAllNotAssignedForProject($project_id, $user_id)
         {
                 $c2 = new Criteria();
+                $c2->add(self::IS_ACTIVE, true);
                 $c2->add(ProjectUserPeer::PROJECT_ID, $project_id);
                 if($user_id != null) {//we want to see user while edit
                     $c2->add(ProjectUserPeer::USER_ID, $user_id, Criteria::NOT_EQUAL);
@@ -49,6 +50,7 @@ class sfGuardUserPeer extends PluginsfGuardUserPeer
 	        }
 
                 $c1 = new Criteria();
+                $c1->add(self::IS_ACTIVE, true);
 	        $c1->addAnd(self::ID, $projectUserIds, Criteria::NOT_IN);
 		$objects=self::doSelect($c1);
 
