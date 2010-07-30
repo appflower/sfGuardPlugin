@@ -79,24 +79,6 @@ class sfGuardUserPeer extends PluginsfGuardUserPeer
 		
 		return $c;
 	}
-    
-    public static function fetchByProject($project_id) {
-		$c = new Criteria();
-        
-        $cProjectUsers = new Criteria();
-        if ($project_id&&$project_id!='all') {
-        	$cProjectUsers->add(ProjectUserPeer::PROJECT_ID, $project_id);
-	        $projectUsers = ProjectUserPeer::doSelect($cProjectUsers);
-	        $projectUserIds = array();
-	        if($projectUsers != null) {
-	            foreach ($projectUsers as $projectUser) {
-	                $projectUserIds[] = $projectUser->getUserId();
-	            }
-	        }
-	        $c->addAnd(self::ID, $projectUserIds, Criteria::IN);
-        }
-		return $c;
-	}
 	
 	public static function isEditable(Array $args) {
 		if(sfContext::getInstance()->getUser()->hasCredential('user_list_edit')) {
