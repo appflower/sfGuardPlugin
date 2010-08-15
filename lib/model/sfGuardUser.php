@@ -90,4 +90,26 @@ class sfGuardUser extends PluginsfGuardUser {
     	
     	return ProjectPeer::doSelect($c);
     }
+    public function getUploadDir()
+    {
+        $folder = self::getBaseUploadDir().$this->getId();
+        if(!file_exists($folder)){
+            mkdir($folder, 0777, true);
+        }
+        return $folder;
+    }
+
+    public function getBaseUploadDirUrl()
+    {
+        $conf = frontendConfiguration::getActive();
+        $baseUrl = $conf->getBaseWebDirUrl();
+        return "{$baseUrl}user/".$this->getId();
+    }
+
+    static function getBaseUploadDir()
+    {
+        $conf = frontendConfiguration::getActive();
+        $baseUploadDir = $conf->getBaseWebUploadDir();
+        return "{$baseUploadDir}user/";
+    }
 }
