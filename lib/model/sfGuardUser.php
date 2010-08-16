@@ -109,7 +109,7 @@ class sfGuardUser extends PluginsfGuardUser {
     static function getBaseUploadDir()
     {
         $conf = frontendConfiguration::getActive();
-        $baseUploadDir = $conf->getBaseWebUploadDir();
+        $baseUploadDir = $conf->getWebUploadDir();
         return "{$baseUploadDir}user/";
     }
 }
