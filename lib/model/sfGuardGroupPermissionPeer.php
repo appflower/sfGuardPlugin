@@ -42,4 +42,12 @@ class sfGuardGroupPermissionPeer extends PluginsfGuardGroupPermissionPeer
 		return array($options,$selected);
 		
 	}
+
+        public static function getForGroupId($groupId)
+        {
+            $c = new Criteria();
+            $c->add(self::GROUP_ID, $groupId);
+
+            return self::doSelect($c);
+        }
 }

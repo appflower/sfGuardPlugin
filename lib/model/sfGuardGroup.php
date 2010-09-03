@@ -21,4 +21,24 @@ class sfGuardGroup extends PluginsfGuardGroup
     {
         return '<a class="widgetLoad" href="'.sfContext::getInstance()->getController()->genUrl('/sfGuardGroup/edit?id='.$this->getId(), true).'"> '.$this->getName().' </a>';
     }
+
+    public function getIsProjectOwner()
+    {
+        $groupUserId = sfGuardGroupPeer::getProjectLeaderRoleId();
+        if($this->getId() == $groupUserId) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public function setAsProjectOwner()
+    {
+        sfGuardGroupPeer::clearProjectOwnerRole();
+
+        $config = new Config();
+        $config->setName('project_owner_sf_guard_group_id');
+        $config->setValue($this->getId());
+        $config->save();
+    }
 }
