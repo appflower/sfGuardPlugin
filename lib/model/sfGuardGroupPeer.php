@@ -38,12 +38,13 @@ class sfGuardGroupPeer extends PluginsfGuardGroupPeer
 		return $timezonesArray;		
 	}
 
-        public static function getAllForSelect($including_owner = 'true')
+        public static function getAllForSelect()
         {
             $c = new Criteria();
 
-            if($including_owner == 'false') {
-//                $c->add(self::PROJECT_OWNER_ROLE, NULL, Criteria::ISNULL);
+            $projectOwnerGroupId = ConfigPeer::get('project_owner_sf_guard_group_id');
+            if ($projectOwnerGroupId > 0) {
+                $c->add(self::ID, $projectOwnerGroupId, Criteria::NOT_EQUAL);
             }
 
             $objects = self::doSelect($c);
@@ -69,7 +70,7 @@ class sfGuardGroupPeer extends PluginsfGuardGroupPeer
 		}
 	}
 
-        public static function getProjectLeaderRoleId()
+        public static function getProjectLeaderRoleId($throwExceptionOnError = true)
         {
             $c = new Criteria();
             $c->add(ConfigPeer::NAME, 'project_owner_sf_guard_group_id');
@@ -77,8 +78,10 @@ class sfGuardGroupPeer extends PluginsfGuardGroupPeer
 
             $group = sfGuardGroupPeer::doSelectOne($c);
 
-            if(!$group) {
+            if($throwExceptionOnError && !$group) {
                 throw new sfException("There is no project role marked as project leader");
+            } else if (!$group) {
+                return null;
             }
 
             return $group->getId();
@@ -86,10 +89,6 @@ class sfGuardGroupPeer extends PluginsfGuardGroupPeer
 
         public static function clearProjectOwnerRole()
         {
-            $c = new Criteria();
-            $c->add(ConfigPeer::NAME, 'project_owner_sf_guard_group_id');
-
-            $config = ConfigPeer::doSelectOne($c);
-            $config->delete();
+            ConfigPeer::set('project_owner_sf_guard_group_id', null);
         }
 }

@@ -172,15 +172,4 @@ class sfGuardUserPeer extends PluginsfGuardUserPeer
             }
 
 	}
-
-        public static function areNotAssignedForProject($project_id)
-        {
-            $users = self::getAllNotAssignedForProject($project_id, null);
-
-            if($users!=null) {
-                return true;
-            } else {
-                return false;
-            }
-        }
 }

@@ -24,7 +24,7 @@ class sfGuardGroup extends PluginsfGuardGroup
 
     public function getIsProjectOwner()
     {
-        $groupUserId = sfGuardGroupPeer::getProjectLeaderRoleId();
+        $groupUserId = sfGuardGroupPeer::getProjectLeaderRoleId(false);
         if($this->getId() == $groupUserId) {
             return true;
         } else {
@@ -35,10 +35,6 @@ class sfGuardGroup extends PluginsfGuardGroup
     public function setAsProjectOwner()
     {
         sfGuardGroupPeer::clearProjectOwnerRole();
-
-        $config = new Config();
-        $config->setName('project_owner_sf_guard_group_id');
-        $config->setValue($this->getId());
-        $config->save();
+        ConfigPeer::set('project_owner_sf_guard_group_id', $this->getId());
     }
 }
