@@ -125,6 +125,13 @@ class sfGuardUserPeer extends PluginsfGuardUserPeer
 			return false;
 		}
 	}
+
+	public static function getByUsername($username)
+	{
+		$c = new Criteria();
+		$c->add(self::USERNAME,$username);
+		return self::doSelectOne($c);
+	}
 	
 	/**
 	 * search for user by username, id or beanstalk_user
