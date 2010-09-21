@@ -20,38 +20,38 @@ class sfGuardUserPeer extends PluginsfGuardUserPeer
 	public static function getAll()
 	{
 		$objects=self::doSelect(new Criteria());
-		
+
 		if($objects!=null)
 		{
 			foreach ($objects as $object)
 			{
 				$array[$object->getId()]=$object->getFirstName().' '.$object->getLastName();
-			}			
-			
+			}
+
 			return $array;
 		}
-		else return array();		
+		else return array();
 	}
 
-        public static function getAllNotAssignedForProject($project_id, $user_id)
-        {
-                $c2 = new Criteria();
-                $c2->add(self::IS_ACTIVE, true);
-                $c2->add(ProjectUserPeer::PROJECT_ID, $project_id);
-                if($user_id != null) {//we want to see user while edit
-                    $c2->add(ProjectUserPeer::USER_ID, $user_id, Criteria::NOT_EQUAL);
-                }
-	        $projectUsers = ProjectUserPeer::doSelect($c2);
-	        $projectUserIds = array();
-	        if($projectUsers != null) {
-	            foreach ($projectUsers as $projectUser) {
-	                $projectUserIds[] = $projectUser->getUserId();
-	            }
-	        }
+	public static function getAllNotAssignedForProject($project_id, $user_id)
+	{
+		$c2 = new Criteria();
+		$c2->add(self::IS_ACTIVE, true);
+		$c2->add(ProjectUserPeer::PROJECT_ID, $project_id);
+		if($user_id != null) {//we want to see user while edit
+			$c2->add(ProjectUserPeer::USER_ID, $user_id, Criteria::NOT_EQUAL);
+		}
+		$projectUsers = ProjectUserPeer::doSelect($c2);
+		$projectUserIds = array();
+		if($projectUsers != null) {
+			foreach ($projectUsers as $projectUser) {
+				$projectUserIds[] = $projectUser->getUserId();
+			}
+		}
 
-                $c1 = new Criteria();
-                $c1->add(self::IS_ACTIVE, true);
-	        $c1->addAnd(self::ID, $projectUserIds, Criteria::NOT_IN);
+		$c1 = new Criteria();
+		$c1->add(self::IS_ACTIVE, true);
+		$c1->addAnd(self::ID, $projectUserIds, Criteria::NOT_IN);
 		$objects=self::doSelect($c1);
 
 		if($objects!=null)
@@ -63,23 +63,23 @@ class sfGuardUserPeer extends PluginsfGuardUserPeer
 
 			return $array;
 		}
-		else return array();	
-        }
-	
+		else return array();
+	}
+
 	public static function getAllUsers()
 	{
 		$c = new Criteria();
 		$c->addJoin(self::ID,sfGuardUserProfilePeer::USER_ID);
 		return $c;
 	}
-	
+
 	public static function fetchData() {
 		$c = new Criteria();
 		$c->addAscendingOrderByColumn(self::ID);
-		
+
 		return $c;
 	}
-	
+
 	public static function isEditable(Array $args) {
 		if(sfContext::getInstance()->getUser()->hasCredential('user_list_edit')) {
 			return true;
@@ -87,23 +87,23 @@ class sfGuardUserPeer extends PluginsfGuardUserPeer
 			return false;
 		}
 	}
-	
+
 	public static function getEmails()
 	{
 		$objects=self::doSelect(new Criteria());
-		
+
 		if($objects!=null)
 		{
 			foreach ($objects as $object)
 			{
 				$array[$object->getUsername()]=$object->getFirstName().' '.$object->getLastName();
-			}			
-			
+			}
+
 			return $array;
 		}
-		else return array();		
+		else return array();
 	}
-	
+
 	/**
 	 * used in beanstalk web hooks
 	 *
@@ -116,7 +116,7 @@ class sfGuardUserPeer extends PluginsfGuardUserPeer
 		$c = new Criteria();
 		$c->add(self::USERNAME,$email);
 		$obj=self::doSelectOne($c);
-		
+
 		if($obj!=null)
 		{
 			return $obj;
@@ -132,7 +132,7 @@ class sfGuardUserPeer extends PluginsfGuardUserPeer
 		$c->add(self::USERNAME,$username);
 		return self::doSelectOne($c);
 	}
-	
+
 	/**
 	 * search for user by username, id or beanstalk_user
 	 *
@@ -149,10 +149,10 @@ class sfGuardUserPeer extends PluginsfGuardUserPeer
 		$crit1=$c->getNewCriterion(self::ID,$keyword);
 		$crit2=$c->getNewCriterion(sfGuardUserProfilePeer::BEANSTALK_USER,$keyword);
 		$crit0->addOr($crit1);
-		$crit0->addOr($crit2);		
-		$c->addAnd($crit0);		
+		$crit0->addOr($crit2);
+		$c->addAnd($crit0);
 		$obj=self::doSelectOne($c);
-		
+
 		if($obj!=null)
 		{
 			return $obj;
@@ -161,22 +161,57 @@ class sfGuardUserPeer extends PluginsfGuardUserPeer
 			return false;
 		}
 	}
-	
+
 	public static function sendWelcomeEmail($user_id, $password)
 	{
-            $userObj = sfGuardUserPeer::retrieveByPK($user_id);
+		$userObj = sfGuardUserPeer::retrieveByPK($user_id);
 
-            if ($userObj->getUsername()) {
-                $parameters = array(
+		if ($userObj->getUsername()) {
+			$parameters = array(
                     'userObj'  => $userObj,
                     'password' => $password,
                     'email'    => $userObj->getUsername(),
                     'subject'  => 'Welcome to Seedcontrol',
                     'from'     => 'Seedcontrol'
-                );
+                    );
 
-                afAutomailer::saveMail('mail', 'sendWelcomeEmail', $parameters);
-            }
+                    afAutomailer::saveMail('mail', 'sendWelcomeEmail', $parameters);
+		}
 
+	}
+
+	public static function getUsersByEmailCc($ticket_id)
+	{
+		$ticketObj = TicketPeer::retrieveByPK($ticket_id);
+		
+		$c = new Criteria();
+		$c->add(self::ID, array($ticketObj->getUserId(), $ticketObj->getOwnerId()), Criteria::NOT_IN);
+		$a = $c->toString();
+		$objs=self::doSelect($c);
+		$options=array();
+		if($objs!=null)
+		{
+			foreach ($objs as $obj)
+			{
+				$options[$obj->getUsername()]=$obj->getName();
+			}
+		}
+	  
+		$selected = array();
+		$emails = explode(',', $ticketObj->getEmailCc());
+
+		if(is_array($emails))
+		{
+			foreach($emails as $email)
+			{
+				$userObj = sfGuardUserPeer::getByUsername($email);
+				if(isset($userObj))
+				{
+					$selected[$userObj->getUsername()] = $userObj->getName();
+				}
+			}
+		}
+	  
+		return array($options,$selected);
 	}
 }
