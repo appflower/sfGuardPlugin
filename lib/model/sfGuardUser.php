@@ -58,10 +58,11 @@ class sfGuardUser extends PluginsfGuardUser {
     public function getPicture() {
         sfProjectConfiguration::getActive()->loadHelpers(array("Url", "Tag", "Thumbnail"));
         $img = $this->getProfile()->getProfilePicture();
-        if (empty($img)) {
-            return thumbnail_tag("images/anonymous.jpeg", 100, 100);
-        } else {
+        if (is_file(sfConfig::get('sf_root_dir').'/web/'.$img)) {
             return thumbnail_tag($this->getProfile()->getProfilePicture(), 100, 100);
+        } else {
+        	return thumbnail_tag("images/anonymous.jpeg", 100, 100);
+            
         }
     }
     
