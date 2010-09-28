@@ -180,12 +180,16 @@ class sfGuardUserPeer extends PluginsfGuardUserPeer
 
 	}
 
-	public static function getUsersByEmailCc($ticket_id)
+	public static function getUsersByEmailCc($ticket_id=null)
 	{
-		$ticketObj = TicketPeer::retrieveByPK($ticket_id);
+		if($ticket_id!=null) {
+			$ticketObj = TicketPeer::retrieveByPK($ticket_id);
+		}
 		
 		$c = new Criteria();
-		$c->add(self::ID, array($ticketObj->getUserId(), $ticketObj->getOwnerId()), Criteria::NOT_IN);
+		if($ticket_id!=null) {
+			$c->add(self::ID, array($ticketObj->getUserId(), $ticketObj->getOwnerId()), Criteria::NOT_IN);
+		}
 		$a = $c->toString();
 		$objs=self::doSelect($c);
 		$options=array();
@@ -198,7 +202,9 @@ class sfGuardUserPeer extends PluginsfGuardUserPeer
 		}
 	  
 		$selected = array();
-		$emails = explode(',', $ticketObj->getEmailCc());
+		if($ticket_id!=null) {
+			$emails = explode(',', $ticketObj->getEmailCc());
+		}
 
 		if(is_array($emails))
 		{
