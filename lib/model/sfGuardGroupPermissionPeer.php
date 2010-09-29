@@ -48,6 +48,6 @@ class sfGuardGroupPermissionPeer extends PluginsfGuardGroupPermissionPeer
             $c = new Criteria();
             $c->add(self::GROUP_ID, $groupId);
 
-            return self::doSelect($c);
+            return self::doSelectJoinsfGuardPermission($c);
         }
 }
