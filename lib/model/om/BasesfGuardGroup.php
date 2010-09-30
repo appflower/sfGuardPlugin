@@ -10,8 +10,6 @@
 abstract class BasesfGuardGroup extends BaseObject  implements Persistent {
 
 
-  const PEER = 'sfGuardGroupPeer';
-
 	/**
 	 * The Peer class.
 	 * Instance provides a convenient way of calling static methods on a class
@@ -59,6 +57,16 @@ abstract class BasesfGuardGroup extends BaseObject  implements Persistent {
 	private $lastsfGuardUserGroupCriteria = null;
 
 	/**
+	 * @var        array ProjectUser[] Collection to store aggregation of ProjectUser objects.
+	 */
+	protected $collProjectUsers;
+
+	/**
+	 * @var        Criteria The criteria used to select the current contents of collProjectUsers.
+	 */
+	private $lastProjectUserCriteria = null;
+
+	/**
 	 * Flag to prevent endless save loop, if this object is referenced
 	 * by another object which falls in this transaction.
 	 * @var        boolean
@@ -72,25 +80,9 @@ abstract class BasesfGuardGroup extends BaseObject  implements Persistent {
 	 */
 	protected $alreadyInValidation = false;
 
-	/**
-	 * Initializes internal state of BasesfGuardGroup object.
-	 * @see        applyDefaults()
-	 */
-	public function __construct()
-	{
-		parent::__construct();
-		$this->applyDefaultValues();
-	}
-
-	/**
-	 * Applies default values to this object.
-	 * This method should be called from the object's constructor (or
-	 * equivalent initialization method).
-	 * @see        __construct()
-	 */
-	public function applyDefaultValues()
-	{
-	}
+	// symfony behavior
+	
+	const PEER = 'sfGuardGroupPeer';
 
 	/**
 	 * Get the [id] column value.
@@ -192,11 +184,6 @@ abstract class BasesfGuardGroup extends BaseObject  implements Persistent {
 	 */
 	public function hasOnlyDefaultValues()
 	{
-			// First, ensure that we don't have any columns that have been modified which aren't default columns.
-			if (array_diff($this->modifiedColumns, array())) {
-				return false;
-			}
-
 		// otherwise, everything was equal, so return TRUE
 		return true;
 	} // hasOnlyDefaultValues()
@@ -299,6 +286,9 @@ abstract class BasesfGuardGroup extends BaseObject  implements Persistent {
 			$this->collsfGuardUserGroups = null;
 			$this->lastsfGuardUserGroupCriteria = null;
 
+			$this->collProjectUsers = null;
+			$this->lastProjectUserCriteria = null;
+
 		} // if (deep)
 	}
 
@@ -313,17 +303,6 @@ abstract class BasesfGuardGroup extends BaseObject  implements Persistent {
 	 */
 	public function delete(PropelPDO $con = null)
 	{
-
-    foreach (sfMixer::getCallables('BasesfGuardGroup:delete:pre') as $callable)
-    {
-      $ret = call_user_func($callable, $this, $con);
-      if ($ret)
-      {
-        return;
-      }
-    }
-
-
 		if ($this->isDeleted()) {
 			throw new PropelException("This object has already been deleted.");
 		}
@@ -334,21 +313,38 @@ abstract class BasesfGuardGroup extends BaseObject  implements Persistent {
 		
 		$con->beginTransaction();
 		try {
-			sfGuardGroupPeer::doDelete($this, $con);
-			$this->setDeleted(true);
-			$con->commit();
+			$ret = $this->preDelete($con);
+			// symfony_behaviors behavior
+			foreach (sfMixer::getCallables('BasesfGuardGroup:delete:pre') as $callable)
+			{
+			  if (call_user_func($callable, $this, $con))
+			  {
+			    $con->commit();
+			
+			    return;
+			  }
+			}
+
+			if ($ret) {
+				sfGuardGroupPeer::doDelete($this, $con);
+				$this->postDelete($con);
+				// symfony_behaviors behavior
+				foreach (sfMixer::getCallables('BasesfGuardGroup:delete:post') as $callable)
+				{
+				  call_user_func($callable, $this, $con);
+				}
+
+				$this->setDeleted(true);
+				$con->commit();
+			} else {
+				$con->commit();
+			}
 		} catch (PropelException $e) {
 			$con->rollBack();
 			throw $e;
 		}
-	
+	}
 
-    foreach (sfMixer::getCallables('BasesfGuardGroup:delete:post') as $callable)
-    {
-      call_user_func($callable, $this, $con);
-    }
-
-  }
 	/**
 	 * Persists this object to the database.
 	 *
@@ -364,17 +360,6 @@ abstract class BasesfGuardGroup extends BaseObject  implements Persistent {
 	 */
 	public function save(PropelPDO $con = null)
 	{
-
-    foreach (sfMixer::getCallables('BasesfGuardGroup:save:pre') as $callable)
-    {
-      $affectedRows = call_user_func($callable, $this, $con);
-      if (is_int($affectedRows))
-      {
-        return $affectedRows;
-      }
-    }
-
-
 		if ($this->isDeleted()) {
 			throw new PropelException("You cannot save an object that has been deleted.");
 		}
@@ -384,15 +369,44 @@ abstract class BasesfGuardGroup extends BaseObject  implements Persistent {
 		}
 		
 		$con->beginTransaction();
+		$isInsert = $this->isNew();
 		try {
-			$affectedRows = $this->doSave($con);
-			$con->commit();
-    foreach (sfMixer::getCallables('BasesfGuardGroup:save:post') as $callable)
-    {
-      call_user_func($callable, $this, $con, $affectedRows);
-    }
+			$ret = $this->preSave($con);
+			// symfony_behaviors behavior
+			foreach (sfMixer::getCallables('BasesfGuardGroup:save:pre') as $callable)
+			{
+			  if (is_integer($affectedRows = call_user_func($callable, $this, $con)))
+			  {
+			    $con->commit();
+			
+			    return $affectedRows;
+			  }
+			}
 
-			sfGuardGroupPeer::addInstanceToPool($this);
+			if ($isInsert) {
+				$ret = $ret && $this->preInsert($con);
+			} else {
+				$ret = $ret && $this->preUpdate($con);
+			}
+			if ($ret) {
+				$affectedRows = $this->doSave($con);
+				if ($isInsert) {
+					$this->postInsert($con);
+				} else {
+					$this->postUpdate($con);
+				}
+				$this->postSave($con);
+				// symfony_behaviors behavior
+				foreach (sfMixer::getCallables('BasesfGuardGroup:save:post') as $callable)
+				{
+				  call_user_func($callable, $this, $con, $affectedRows);
+				}
+
+				sfGuardGroupPeer::addInstanceToPool($this);
+			} else {
+				$affectedRows = 0;
+			}
+			$con->commit();
 			return $affectedRows;
 		} catch (PropelException $e) {
 			$con->rollBack();
@@ -449,6 +463,14 @@ abstract class BasesfGuardGroup extends BaseObject  implements Persistent {
 
 			if ($this->collsfGuardUserGroups !== null) {
 				foreach ($this->collsfGuardUserGroups as $referrerFK) {
+					if (!$referrerFK->isDeleted()) {
+						$affectedRows += $referrerFK->save($con);
+					}
+				}
+			}
+
+			if ($this->collProjectUsers !== null) {
+				foreach ($this->collProjectUsers as $referrerFK) {
 					if (!$referrerFK->isDeleted()) {
 						$affectedRows += $referrerFK->save($con);
 					}
@@ -536,6 +558,14 @@ abstract class BasesfGuardGroup extends BaseObject  implements Persistent {
 
 				if ($this->collsfGuardUserGroups !== null) {
 					foreach ($this->collsfGuardUserGroups as $referrerFK) {
+						if (!$referrerFK->validate($columns)) {
+							$failureMap = array_merge($failureMap, $referrerFK->getValidationFailures());
+						}
+					}
+				}
+
+				if ($this->collProjectUsers !== null) {
+					foreach ($this->collProjectUsers as $referrerFK) {
 						if (!$referrerFK->validate($columns)) {
 							$failureMap = array_merge($failureMap, $referrerFK->getValidationFailures());
 						}
@@ -765,6 +795,12 @@ abstract class BasesfGuardGroup extends BaseObject  implements Persistent {
 				}
 			}
 
+			foreach ($this->getProjectUsers() as $relObj) {
+				if ($relObj !== $this) {  // ensure that we don't try to copy a reference to ourselves
+					$copyObj->addProjectUser($relObj->copy($deepCopy));
+				}
+			}
+
 		} // if ($deepCopy)
 
 
@@ -923,7 +959,7 @@ abstract class BasesfGuardGroup extends BaseObject  implements Persistent {
 
 				$criteria->add(sfGuardGroupPermissionPeer::GROUP_ID, $this->id);
 
-				$count = sfGuardGroupPermissionPeer::doCount($criteria, $con);
+				$count = sfGuardGroupPermissionPeer::doCount($criteria, false, $con);
 			}
 		} else {
 			// criteria has no effect for a new object
@@ -936,7 +972,7 @@ abstract class BasesfGuardGroup extends BaseObject  implements Persistent {
 				$criteria->add(sfGuardGroupPermissionPeer::GROUP_ID, $this->id);
 
 				if (!isset($this->lastsfGuardGroupPermissionCriteria) || !$this->lastsfGuardGroupPermissionCriteria->equals($criteria)) {
-					$count = sfGuardGroupPermissionPeer::doCount($criteria, $con);
+					$count = sfGuardGroupPermissionPeer::doCount($criteria, false, $con);
 				} else {
 					$count = count($this->collsfGuardGroupPermissions);
 				}
@@ -1124,7 +1160,7 @@ abstract class BasesfGuardGroup extends BaseObject  implements Persistent {
 
 				$criteria->add(sfGuardUserGroupPeer::GROUP_ID, $this->id);
 
-				$count = sfGuardUserGroupPeer::doCount($criteria, $con);
+				$count = sfGuardUserGroupPeer::doCount($criteria, false, $con);
 			}
 		} else {
 			// criteria has no effect for a new object
@@ -1137,7 +1173,7 @@ abstract class BasesfGuardGroup extends BaseObject  implements Persistent {
 				$criteria->add(sfGuardUserGroupPeer::GROUP_ID, $this->id);
 
 				if (!isset($this->lastsfGuardUserGroupCriteria) || !$this->lastsfGuardUserGroupCriteria->equals($criteria)) {
-					$count = sfGuardUserGroupPeer::doCount($criteria, $con);
+					$count = sfGuardUserGroupPeer::doCount($criteria, false, $con);
 				} else {
 					$count = count($this->collsfGuardUserGroups);
 				}
@@ -1215,6 +1251,254 @@ abstract class BasesfGuardGroup extends BaseObject  implements Persistent {
 	}
 
 	/**
+	 * Clears out the collProjectUsers collection (array).
+	 *
+	 * This does not modify the database; however, it will remove any associated objects, causing
+	 * them to be refetched by subsequent calls to accessor method.
+	 *
+	 * @return     void
+	 * @see        addProjectUsers()
+	 */
+	public function clearProjectUsers()
+	{
+		$this->collProjectUsers = null; // important to set this to NULL since that means it is uninitialized
+	}
+
+	/**
+	 * Initializes the collProjectUsers collection (array).
+	 *
+	 * By default this just sets the collProjectUsers collection to an empty array (like clearcollProjectUsers());
+	 * however, you may wish to override this method in your stub class to provide setting appropriate
+	 * to your application -- for example, setting the initial array to the values stored in database.
+	 *
+	 * @return     void
+	 */
+	public function initProjectUsers()
+	{
+		$this->collProjectUsers = array();
+	}
+
+	/**
+	 * Gets an array of ProjectUser objects which contain a foreign key that references this object.
+	 *
+	 * If this collection has already been initialized with an identical Criteria, it returns the collection.
+	 * Otherwise if this sfGuardGroup has previously been saved, it will retrieve
+	 * related ProjectUsers from storage. If this sfGuardGroup is new, it will return
+	 * an empty collection or the current collection, the criteria is ignored on a new object.
+	 *
+	 * @param      PropelPDO $con
+	 * @param      Criteria $criteria
+	 * @return     array ProjectUser[]
+	 * @throws     PropelException
+	 */
+	public function getProjectUsers($criteria = null, PropelPDO $con = null)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardGroupPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collProjectUsers === null) {
+			if ($this->isNew()) {
+			   $this->collProjectUsers = array();
+			} else {
+
+				$criteria->add(ProjectUserPeer::SF_GUARD_GROUP_ID, $this->id);
+
+				ProjectUserPeer::addSelectColumns($criteria);
+				$this->collProjectUsers = ProjectUserPeer::doSelect($criteria, $con);
+			}
+		} else {
+			// criteria has no effect for a new object
+			if (!$this->isNew()) {
+				// the following code is to determine if a new query is
+				// called for.  If the criteria is the same as the last
+				// one, just return the collection.
+
+
+				$criteria->add(ProjectUserPeer::SF_GUARD_GROUP_ID, $this->id);
+
+				ProjectUserPeer::addSelectColumns($criteria);
+				if (!isset($this->lastProjectUserCriteria) || !$this->lastProjectUserCriteria->equals($criteria)) {
+					$this->collProjectUsers = ProjectUserPeer::doSelect($criteria, $con);
+				}
+			}
+		}
+		$this->lastProjectUserCriteria = $criteria;
+		return $this->collProjectUsers;
+	}
+
+	/**
+	 * Returns the number of related ProjectUser objects.
+	 *
+	 * @param      Criteria $criteria
+	 * @param      boolean $distinct
+	 * @param      PropelPDO $con
+	 * @return     int Count of related ProjectUser objects.
+	 * @throws     PropelException
+	 */
+	public function countProjectUsers(Criteria $criteria = null, $distinct = false, PropelPDO $con = null)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardGroupPeer::DATABASE_NAME);
+		} else {
+			$criteria = clone $criteria;
+		}
+
+		if ($distinct) {
+			$criteria->setDistinct();
+		}
+
+		$count = null;
+
+		if ($this->collProjectUsers === null) {
+			if ($this->isNew()) {
+				$count = 0;
+			} else {
+
+				$criteria->add(ProjectUserPeer::SF_GUARD_GROUP_ID, $this->id);
+
+				$count = ProjectUserPeer::doCount($criteria, false, $con);
+			}
+		} else {
+			// criteria has no effect for a new object
+			if (!$this->isNew()) {
+				// the following code is to determine if a new query is
+				// called for.  If the criteria is the same as the last
+				// one, just return count of the collection.
+
+
+				$criteria->add(ProjectUserPeer::SF_GUARD_GROUP_ID, $this->id);
+
+				if (!isset($this->lastProjectUserCriteria) || !$this->lastProjectUserCriteria->equals($criteria)) {
+					$count = ProjectUserPeer::doCount($criteria, false, $con);
+				} else {
+					$count = count($this->collProjectUsers);
+				}
+			} else {
+				$count = count($this->collProjectUsers);
+			}
+		}
+		return $count;
+	}
+
+	/**
+	 * Method called to associate a ProjectUser object to this object
+	 * through the ProjectUser foreign key attribute.
+	 *
+	 * @param      ProjectUser $l ProjectUser
+	 * @return     void
+	 * @throws     PropelException
+	 */
+	public function addProjectUser(ProjectUser $l)
+	{
+		if ($this->collProjectUsers === null) {
+			$this->initProjectUsers();
+		}
+		if (!in_array($l, $this->collProjectUsers, true)) { // only add it if the **same** object is not already associated
+			array_push($this->collProjectUsers, $l);
+			$l->setsfGuardGroup($this);
+		}
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardGroup is new, it will return
+	 * an empty collection; or if this sfGuardGroup has previously
+	 * been saved, it will retrieve related ProjectUsers from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardGroup.
+	 */
+	public function getProjectUsersJoinProject($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardGroupPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collProjectUsers === null) {
+			if ($this->isNew()) {
+				$this->collProjectUsers = array();
+			} else {
+
+				$criteria->add(ProjectUserPeer::SF_GUARD_GROUP_ID, $this->id);
+
+				$this->collProjectUsers = ProjectUserPeer::doSelectJoinProject($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(ProjectUserPeer::SF_GUARD_GROUP_ID, $this->id);
+
+			if (!isset($this->lastProjectUserCriteria) || !$this->lastProjectUserCriteria->equals($criteria)) {
+				$this->collProjectUsers = ProjectUserPeer::doSelectJoinProject($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastProjectUserCriteria = $criteria;
+
+		return $this->collProjectUsers;
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardGroup is new, it will return
+	 * an empty collection; or if this sfGuardGroup has previously
+	 * been saved, it will retrieve related ProjectUsers from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardGroup.
+	 */
+	public function getProjectUsersJoinsfGuardUser($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardGroupPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collProjectUsers === null) {
+			if ($this->isNew()) {
+				$this->collProjectUsers = array();
+			} else {
+
+				$criteria->add(ProjectUserPeer::SF_GUARD_GROUP_ID, $this->id);
+
+				$this->collProjectUsers = ProjectUserPeer::doSelectJoinsfGuardUser($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(ProjectUserPeer::SF_GUARD_GROUP_ID, $this->id);
+
+			if (!isset($this->lastProjectUserCriteria) || !$this->lastProjectUserCriteria->equals($criteria)) {
+				$this->collProjectUsers = ProjectUserPeer::doSelectJoinsfGuardUser($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastProjectUserCriteria = $criteria;
+
+		return $this->collProjectUsers;
+	}
+
+	/**
 	 * Resets all collections of referencing foreign keys.
 	 *
 	 * This method is a user-space workaround for PHP's inability to garbage collect objects
@@ -1236,24 +1520,33 @@ abstract class BasesfGuardGroup extends BaseObject  implements Persistent {
 					$o->clearAllReferences($deep);
 				}
 			}
+			if ($this->collProjectUsers) {
+				foreach ((array) $this->collProjectUsers as $o) {
+					$o->clearAllReferences($deep);
+				}
+			}
 		} // if ($deep)
 
 		$this->collsfGuardGroupPermissions = null;
 		$this->collsfGuardUserGroups = null;
+		$this->collProjectUsers = null;
 	}
 
-
-  public function __call($method, $arguments)
-  {
-    if (!$callable = sfMixer::getCallable('BasesfGuardGroup:'.$method))
-    {
-      throw new sfException(sprintf('Call to undefined method BasesfGuardGroup::%s', $method));
-    }
-
-    array_unshift($arguments, $this);
-
-    return call_user_func_array($callable, $arguments);
-  }
-
+	// symfony_behaviors behavior
+	
+	/**
+	 * Calls methods defined via {@link sfMixer}.
+	 */
+	public function __call($method, $arguments)
+	{
+	  if (!$callable = sfMixer::getCallable('BasesfGuardGroup:'.$method))
+	  {
+	    throw new sfException(sprintf('Call to undefined method BasesfGuardGroup::%s', $method));
+	  }
+	
+	  array_unshift($arguments, $this);
+	
+	  return call_user_func_array($callable, $arguments);
+	}
 
 } // BasesfGuardGroup

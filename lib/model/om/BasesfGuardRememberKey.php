@@ -10,8 +10,6 @@
 abstract class BasesfGuardRememberKey extends BaseObject  implements Persistent {
 
 
-  const PEER = 'sfGuardRememberKeyPeer';
-
 	/**
 	 * The Peer class.
 	 * Instance provides a convenient way of calling static methods on a class
@@ -63,25 +61,9 @@ abstract class BasesfGuardRememberKey extends BaseObject  implements Persistent 
 	 */
 	protected $alreadyInValidation = false;
 
-	/**
-	 * Initializes internal state of BasesfGuardRememberKey object.
-	 * @see        applyDefaults()
-	 */
-	public function __construct()
-	{
-		parent::__construct();
-		$this->applyDefaultValues();
-	}
-
-	/**
-	 * Applies default values to this object.
-	 * This method should be called from the object's constructor (or
-	 * equivalent initialization method).
-	 * @see        __construct()
-	 */
-	public function applyDefaultValues()
-	{
-	}
+	// symfony behavior
+	
+	const PEER = 'sfGuardRememberKeyPeer';
 
 	/**
 	 * Get the [user_id] column value.
@@ -274,11 +256,6 @@ abstract class BasesfGuardRememberKey extends BaseObject  implements Persistent 
 	 */
 	public function hasOnlyDefaultValues()
 	{
-			// First, ensure that we don't have any columns that have been modified which aren't default columns.
-			if (array_diff($this->modifiedColumns, array())) {
-				return false;
-			}
-
 		// otherwise, everything was equal, so return TRUE
 		return true;
 	} // hasOnlyDefaultValues()
@@ -394,17 +371,6 @@ abstract class BasesfGuardRememberKey extends BaseObject  implements Persistent 
 	 */
 	public function delete(PropelPDO $con = null)
 	{
-
-    foreach (sfMixer::getCallables('BasesfGuardRememberKey:delete:pre') as $callable)
-    {
-      $ret = call_user_func($callable, $this, $con);
-      if ($ret)
-      {
-        return;
-      }
-    }
-
-
 		if ($this->isDeleted()) {
 			throw new PropelException("This object has already been deleted.");
 		}
@@ -415,21 +381,38 @@ abstract class BasesfGuardRememberKey extends BaseObject  implements Persistent 
 		
 		$con->beginTransaction();
 		try {
-			sfGuardRememberKeyPeer::doDelete($this, $con);
-			$this->setDeleted(true);
-			$con->commit();
+			$ret = $this->preDelete($con);
+			// symfony_behaviors behavior
+			foreach (sfMixer::getCallables('BasesfGuardRememberKey:delete:pre') as $callable)
+			{
+			  if (call_user_func($callable, $this, $con))
+			  {
+			    $con->commit();
+			
+			    return;
+			  }
+			}
+
+			if ($ret) {
+				sfGuardRememberKeyPeer::doDelete($this, $con);
+				$this->postDelete($con);
+				// symfony_behaviors behavior
+				foreach (sfMixer::getCallables('BasesfGuardRememberKey:delete:post') as $callable)
+				{
+				  call_user_func($callable, $this, $con);
+				}
+
+				$this->setDeleted(true);
+				$con->commit();
+			} else {
+				$con->commit();
+			}
 		} catch (PropelException $e) {
 			$con->rollBack();
 			throw $e;
 		}
-	
+	}
 
-    foreach (sfMixer::getCallables('BasesfGuardRememberKey:delete:post') as $callable)
-    {
-      call_user_func($callable, $this, $con);
-    }
-
-  }
 	/**
 	 * Persists this object to the database.
 	 *
@@ -445,22 +428,6 @@ abstract class BasesfGuardRememberKey extends BaseObject  implements Persistent 
 	 */
 	public function save(PropelPDO $con = null)
 	{
-
-    foreach (sfMixer::getCallables('BasesfGuardRememberKey:save:pre') as $callable)
-    {
-      $affectedRows = call_user_func($callable, $this, $con);
-      if (is_int($affectedRows))
-      {
-        return $affectedRows;
-      }
-    }
-
-
-    if ($this->isNew() && !$this->isColumnModified(sfGuardRememberKeyPeer::CREATED_AT))
-    {
-      $this->setCreatedAt(time());
-    }
-
 		if ($this->isDeleted()) {
 			throw new PropelException("You cannot save an object that has been deleted.");
 		}
@@ -470,15 +437,52 @@ abstract class BasesfGuardRememberKey extends BaseObject  implements Persistent 
 		}
 		
 		$con->beginTransaction();
+		$isInsert = $this->isNew();
 		try {
-			$affectedRows = $this->doSave($con);
-			$con->commit();
-    foreach (sfMixer::getCallables('BasesfGuardRememberKey:save:post') as $callable)
-    {
-      call_user_func($callable, $this, $con, $affectedRows);
-    }
+			$ret = $this->preSave($con);
+			// symfony_behaviors behavior
+			foreach (sfMixer::getCallables('BasesfGuardRememberKey:save:pre') as $callable)
+			{
+			  if (is_integer($affectedRows = call_user_func($callable, $this, $con)))
+			  {
+			    $con->commit();
+			
+			    return $affectedRows;
+			  }
+			}
 
-			sfGuardRememberKeyPeer::addInstanceToPool($this);
+			// symfony_timestampable behavior
+			
+			if ($isInsert) {
+				$ret = $ret && $this->preInsert($con);
+				// symfony_timestampable behavior
+				if (!$this->isColumnModified(sfGuardRememberKeyPeer::CREATED_AT))
+				{
+				  $this->setCreatedAt(time());
+				}
+
+			} else {
+				$ret = $ret && $this->preUpdate($con);
+			}
+			if ($ret) {
+				$affectedRows = $this->doSave($con);
+				if ($isInsert) {
+					$this->postInsert($con);
+				} else {
+					$this->postUpdate($con);
+				}
+				$this->postSave($con);
+				// symfony_behaviors behavior
+				foreach (sfMixer::getCallables('BasesfGuardRememberKey:save:post') as $callable)
+				{
+				  call_user_func($callable, $this, $con, $affectedRows);
+				}
+
+				sfGuardRememberKeyPeer::addInstanceToPool($this);
+			} else {
+				$affectedRows = 0;
+			}
+			$con->commit();
 			return $affectedRows;
 		} catch (PropelException $e) {
 			$con->rollBack();
@@ -925,9 +929,7 @@ abstract class BasesfGuardRememberKey extends BaseObject  implements Persistent 
 	public function getsfGuardUser(PropelPDO $con = null)
 	{
 		if ($this->asfGuardUser === null && ($this->user_id !== null)) {
-			$c = new Criteria(sfGuardUserPeer::DATABASE_NAME);
-			$c->add(sfGuardUserPeer::ID, $this->user_id);
-			$this->asfGuardUser = sfGuardUserPeer::doSelectOne($c, $con);
+			$this->asfGuardUser = sfGuardUserPeer::retrieveByPk($this->user_id);
 			/* The following can be used additionally to
 			   guarantee the related object contains a reference
 			   to this object.  This level of coupling may, however, be
@@ -956,18 +958,21 @@ abstract class BasesfGuardRememberKey extends BaseObject  implements Persistent 
 			$this->asfGuardUser = null;
 	}
 
-
-  public function __call($method, $arguments)
-  {
-    if (!$callable = sfMixer::getCallable('BasesfGuardRememberKey:'.$method))
-    {
-      throw new sfException(sprintf('Call to undefined method BasesfGuardRememberKey::%s', $method));
-    }
-
-    array_unshift($arguments, $this);
-
-    return call_user_func_array($callable, $arguments);
-  }
-
+	// symfony_behaviors behavior
+	
+	/**
+	 * Calls methods defined via {@link sfMixer}.
+	 */
+	public function __call($method, $arguments)
+	{
+	  if (!$callable = sfMixer::getCallable('BasesfGuardRememberKey:'.$method))
+	  {
+	    throw new sfException(sprintf('Call to undefined method BasesfGuardRememberKey::%s', $method));
+	  }
+	
+	  array_unshift($arguments, $this);
+	
+	  return call_user_func_array($callable, $arguments);
+	}
 
 } // BasesfGuardRememberKey

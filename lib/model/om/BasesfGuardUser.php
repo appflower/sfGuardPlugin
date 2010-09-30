@@ -10,8 +10,6 @@
 abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 
 
-  const PEER = 'sfGuardUserPeer';
-
 	/**
 	 * The Peer class.
 	 * Instance provides a convenient way of calling static methods on a class
@@ -108,9 +106,49 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 	private $lastsfGuardRememberKeyCriteria = null;
 
 	/**
+	 * @var        array Component[] Collection to store aggregation of Component objects.
+	 */
+	protected $collComponents;
+
+	/**
+	 * @var        Criteria The criteria used to select the current contents of collComponents.
+	 */
+	private $lastComponentCriteria = null;
+
+	/**
 	 * @var        sfGuardUserProfile one-to-one related sfGuardUserProfile object
 	 */
 	protected $singlesfGuardUserProfile;
+
+	/**
+	 * @var        array Ticket[] Collection to store aggregation of Ticket objects.
+	 */
+	protected $collTicketsRelatedByUserId;
+
+	/**
+	 * @var        Criteria The criteria used to select the current contents of collTicketsRelatedByUserId.
+	 */
+	private $lastTicketRelatedByUserIdCriteria = null;
+
+	/**
+	 * @var        array Ticket[] Collection to store aggregation of Ticket objects.
+	 */
+	protected $collTicketsRelatedByOwnerId;
+
+	/**
+	 * @var        Criteria The criteria used to select the current contents of collTicketsRelatedByOwnerId.
+	 */
+	private $lastTicketRelatedByOwnerIdCriteria = null;
+
+	/**
+	 * @var        array TicketComment[] Collection to store aggregation of TicketComment objects.
+	 */
+	protected $collTicketComments;
+
+	/**
+	 * @var        Criteria The criteria used to select the current contents of collTicketComments.
+	 */
+	private $lastTicketCommentCriteria = null;
 
 	/**
 	 * @var        array Changelog[] Collection to store aggregation of Changelog objects.
@@ -121,6 +159,46 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 	 * @var        Criteria The criteria used to select the current contents of collChangelogs.
 	 */
 	private $lastChangelogCriteria = null;
+
+	/**
+	 * @var        array ProjectUser[] Collection to store aggregation of ProjectUser objects.
+	 */
+	protected $collProjectUsers;
+
+	/**
+	 * @var        Criteria The criteria used to select the current contents of collProjectUsers.
+	 */
+	private $lastProjectUserCriteria = null;
+
+	/**
+	 * @var        array Timetrack[] Collection to store aggregation of Timetrack objects.
+	 */
+	protected $collTimetracks;
+
+	/**
+	 * @var        Criteria The criteria used to select the current contents of collTimetracks.
+	 */
+	private $lastTimetrackCriteria = null;
+
+	/**
+	 * @var        array FilterHistory[] Collection to store aggregation of FilterHistory objects.
+	 */
+	protected $collFilterHistorys;
+
+	/**
+	 * @var        Criteria The criteria used to select the current contents of collFilterHistorys.
+	 */
+	private $lastFilterHistoryCriteria = null;
+
+	/**
+	 * @var        array ProjectPermission[] Collection to store aggregation of ProjectPermission objects.
+	 */
+	protected $collProjectPermissions;
+
+	/**
+	 * @var        Criteria The criteria used to select the current contents of collProjectPermissions.
+	 */
+	private $lastProjectPermissionCriteria = null;
 
 	/**
 	 * @var        array afPortalState[] Collection to store aggregation of afPortalState objects.
@@ -206,15 +284,9 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 	 */
 	protected $alreadyInValidation = false;
 
-	/**
-	 * Initializes internal state of BasesfGuardUser object.
-	 * @see        applyDefaults()
-	 */
-	public function __construct()
-	{
-		parent::__construct();
-		$this->applyDefaultValues();
-	}
+	// symfony behavior
+	
+	const PEER = 'sfGuardUserPeer';
 
 	/**
 	 * Applies default values to this object.
@@ -227,6 +299,16 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 		$this->algorithm = 'sha1';
 		$this->is_active = true;
 		$this->is_super_admin = false;
+	}
+
+	/**
+	 * Initializes internal state of BasesfGuardUser object.
+	 * @see        applyDefaults()
+	 */
+	public function __construct()
+	{
+		parent::__construct();
+		$this->applyDefaultValues();
 	}
 
 	/**
@@ -427,7 +509,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 			$v = (string) $v;
 		}
 
-		if ($this->algorithm !== $v || $v === 'sha1') {
+		if ($this->algorithm !== $v || $this->isNew()) {
 			$this->algorithm = $v;
 			$this->modifiedColumns[] = sfGuardUserPeer::ALGORITHM;
 		}
@@ -585,7 +667,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 			$v = (boolean) $v;
 		}
 
-		if ($this->is_active !== $v || $v === true) {
+		if ($this->is_active !== $v || $this->isNew()) {
 			$this->is_active = $v;
 			$this->modifiedColumns[] = sfGuardUserPeer::IS_ACTIVE;
 		}
@@ -605,7 +687,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 			$v = (boolean) $v;
 		}
 
-		if ($this->is_super_admin !== $v || $v === false) {
+		if ($this->is_super_admin !== $v || $this->isNew()) {
 			$this->is_super_admin = $v;
 			$this->modifiedColumns[] = sfGuardUserPeer::IS_SUPER_ADMIN;
 		}
@@ -623,11 +705,6 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 	 */
 	public function hasOnlyDefaultValues()
 	{
-			// First, ensure that we don't have any columns that have been modified which aren't default columns.
-			if (array_diff($this->modifiedColumns, array(sfGuardUserPeer::ALGORITHM,sfGuardUserPeer::IS_ACTIVE,sfGuardUserPeer::IS_SUPER_ADMIN))) {
-				return false;
-			}
-
 			if ($this->algorithm !== 'sha1') {
 				return false;
 			}
@@ -751,10 +828,34 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 			$this->collsfGuardRememberKeys = null;
 			$this->lastsfGuardRememberKeyCriteria = null;
 
+			$this->collComponents = null;
+			$this->lastComponentCriteria = null;
+
 			$this->singlesfGuardUserProfile = null;
+
+			$this->collTicketsRelatedByUserId = null;
+			$this->lastTicketRelatedByUserIdCriteria = null;
+
+			$this->collTicketsRelatedByOwnerId = null;
+			$this->lastTicketRelatedByOwnerIdCriteria = null;
+
+			$this->collTicketComments = null;
+			$this->lastTicketCommentCriteria = null;
 
 			$this->collChangelogs = null;
 			$this->lastChangelogCriteria = null;
+
+			$this->collProjectUsers = null;
+			$this->lastProjectUserCriteria = null;
+
+			$this->collTimetracks = null;
+			$this->lastTimetrackCriteria = null;
+
+			$this->collFilterHistorys = null;
+			$this->lastFilterHistoryCriteria = null;
+
+			$this->collProjectPermissions = null;
+			$this->lastProjectPermissionCriteria = null;
 
 			$this->collafPortalStates = null;
 			$this->lastafPortalStateCriteria = null;
@@ -791,17 +892,6 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 	 */
 	public function delete(PropelPDO $con = null)
 	{
-
-    foreach (sfMixer::getCallables('BasesfGuardUser:delete:pre') as $callable)
-    {
-      $ret = call_user_func($callable, $this, $con);
-      if ($ret)
-      {
-        return;
-      }
-    }
-
-
 		if ($this->isDeleted()) {
 			throw new PropelException("This object has already been deleted.");
 		}
@@ -812,21 +902,38 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 		
 		$con->beginTransaction();
 		try {
-			sfGuardUserPeer::doDelete($this, $con);
-			$this->setDeleted(true);
-			$con->commit();
+			$ret = $this->preDelete($con);
+			// symfony_behaviors behavior
+			foreach (sfMixer::getCallables('BasesfGuardUser:delete:pre') as $callable)
+			{
+			  if (call_user_func($callable, $this, $con))
+			  {
+			    $con->commit();
+			
+			    return;
+			  }
+			}
+
+			if ($ret) {
+				sfGuardUserPeer::doDelete($this, $con);
+				$this->postDelete($con);
+				// symfony_behaviors behavior
+				foreach (sfMixer::getCallables('BasesfGuardUser:delete:post') as $callable)
+				{
+				  call_user_func($callable, $this, $con);
+				}
+
+				$this->setDeleted(true);
+				$con->commit();
+			} else {
+				$con->commit();
+			}
 		} catch (PropelException $e) {
 			$con->rollBack();
 			throw $e;
 		}
-	
+	}
 
-    foreach (sfMixer::getCallables('BasesfGuardUser:delete:post') as $callable)
-    {
-      call_user_func($callable, $this, $con);
-    }
-
-  }
 	/**
 	 * Persists this object to the database.
 	 *
@@ -842,22 +949,6 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 	 */
 	public function save(PropelPDO $con = null)
 	{
-
-    foreach (sfMixer::getCallables('BasesfGuardUser:save:pre') as $callable)
-    {
-      $affectedRows = call_user_func($callable, $this, $con);
-      if (is_int($affectedRows))
-      {
-        return $affectedRows;
-      }
-    }
-
-
-    if ($this->isNew() && !$this->isColumnModified(sfGuardUserPeer::CREATED_AT))
-    {
-      $this->setCreatedAt(time());
-    }
-
 		if ($this->isDeleted()) {
 			throw new PropelException("You cannot save an object that has been deleted.");
 		}
@@ -867,15 +958,52 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 		}
 		
 		$con->beginTransaction();
+		$isInsert = $this->isNew();
 		try {
-			$affectedRows = $this->doSave($con);
-			$con->commit();
-    foreach (sfMixer::getCallables('BasesfGuardUser:save:post') as $callable)
-    {
-      call_user_func($callable, $this, $con, $affectedRows);
-    }
+			$ret = $this->preSave($con);
+			// symfony_behaviors behavior
+			foreach (sfMixer::getCallables('BasesfGuardUser:save:pre') as $callable)
+			{
+			  if (is_integer($affectedRows = call_user_func($callable, $this, $con)))
+			  {
+			    $con->commit();
+			
+			    return $affectedRows;
+			  }
+			}
 
-			sfGuardUserPeer::addInstanceToPool($this);
+			// symfony_timestampable behavior
+			
+			if ($isInsert) {
+				$ret = $ret && $this->preInsert($con);
+				// symfony_timestampable behavior
+				if (!$this->isColumnModified(sfGuardUserPeer::CREATED_AT))
+				{
+				  $this->setCreatedAt(time());
+				}
+
+			} else {
+				$ret = $ret && $this->preUpdate($con);
+			}
+			if ($ret) {
+				$affectedRows = $this->doSave($con);
+				if ($isInsert) {
+					$this->postInsert($con);
+				} else {
+					$this->postUpdate($con);
+				}
+				$this->postSave($con);
+				// symfony_behaviors behavior
+				foreach (sfMixer::getCallables('BasesfGuardUser:save:post') as $callable)
+				{
+				  call_user_func($callable, $this, $con, $affectedRows);
+				}
+
+				sfGuardUserPeer::addInstanceToPool($this);
+			} else {
+				$affectedRows = 0;
+			}
+			$con->commit();
 			return $affectedRows;
 		} catch (PropelException $e) {
 			$con->rollBack();
@@ -946,14 +1074,78 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 				}
 			}
 
+			if ($this->collComponents !== null) {
+				foreach ($this->collComponents as $referrerFK) {
+					if (!$referrerFK->isDeleted()) {
+						$affectedRows += $referrerFK->save($con);
+					}
+				}
+			}
+
 			if ($this->singlesfGuardUserProfile !== null) {
 				if (!$this->singlesfGuardUserProfile->isDeleted()) {
 						$affectedRows += $this->singlesfGuardUserProfile->save($con);
 				}
 			}
 
+			if ($this->collTicketsRelatedByUserId !== null) {
+				foreach ($this->collTicketsRelatedByUserId as $referrerFK) {
+					if (!$referrerFK->isDeleted()) {
+						$affectedRows += $referrerFK->save($con);
+					}
+				}
+			}
+
+			if ($this->collTicketsRelatedByOwnerId !== null) {
+				foreach ($this->collTicketsRelatedByOwnerId as $referrerFK) {
+					if (!$referrerFK->isDeleted()) {
+						$affectedRows += $referrerFK->save($con);
+					}
+				}
+			}
+
+			if ($this->collTicketComments !== null) {
+				foreach ($this->collTicketComments as $referrerFK) {
+					if (!$referrerFK->isDeleted()) {
+						$affectedRows += $referrerFK->save($con);
+					}
+				}
+			}
+
 			if ($this->collChangelogs !== null) {
 				foreach ($this->collChangelogs as $referrerFK) {
+					if (!$referrerFK->isDeleted()) {
+						$affectedRows += $referrerFK->save($con);
+					}
+				}
+			}
+
+			if ($this->collProjectUsers !== null) {
+				foreach ($this->collProjectUsers as $referrerFK) {
+					if (!$referrerFK->isDeleted()) {
+						$affectedRows += $referrerFK->save($con);
+					}
+				}
+			}
+
+			if ($this->collTimetracks !== null) {
+				foreach ($this->collTimetracks as $referrerFK) {
+					if (!$referrerFK->isDeleted()) {
+						$affectedRows += $referrerFK->save($con);
+					}
+				}
+			}
+
+			if ($this->collFilterHistorys !== null) {
+				foreach ($this->collFilterHistorys as $referrerFK) {
+					if (!$referrerFK->isDeleted()) {
+						$affectedRows += $referrerFK->save($con);
+					}
+				}
+			}
+
+			if ($this->collProjectPermissions !== null) {
+				foreach ($this->collProjectPermissions as $referrerFK) {
 					if (!$referrerFK->isDeleted()) {
 						$affectedRows += $referrerFK->save($con);
 					}
@@ -1111,14 +1303,78 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 					}
 				}
 
+				if ($this->collComponents !== null) {
+					foreach ($this->collComponents as $referrerFK) {
+						if (!$referrerFK->validate($columns)) {
+							$failureMap = array_merge($failureMap, $referrerFK->getValidationFailures());
+						}
+					}
+				}
+
 				if ($this->singlesfGuardUserProfile !== null) {
 					if (!$this->singlesfGuardUserProfile->validate($columns)) {
 						$failureMap = array_merge($failureMap, $this->singlesfGuardUserProfile->getValidationFailures());
 					}
 				}
 
+				if ($this->collTicketsRelatedByUserId !== null) {
+					foreach ($this->collTicketsRelatedByUserId as $referrerFK) {
+						if (!$referrerFK->validate($columns)) {
+							$failureMap = array_merge($failureMap, $referrerFK->getValidationFailures());
+						}
+					}
+				}
+
+				if ($this->collTicketsRelatedByOwnerId !== null) {
+					foreach ($this->collTicketsRelatedByOwnerId as $referrerFK) {
+						if (!$referrerFK->validate($columns)) {
+							$failureMap = array_merge($failureMap, $referrerFK->getValidationFailures());
+						}
+					}
+				}
+
+				if ($this->collTicketComments !== null) {
+					foreach ($this->collTicketComments as $referrerFK) {
+						if (!$referrerFK->validate($columns)) {
+							$failureMap = array_merge($failureMap, $referrerFK->getValidationFailures());
+						}
+					}
+				}
+
 				if ($this->collChangelogs !== null) {
 					foreach ($this->collChangelogs as $referrerFK) {
+						if (!$referrerFK->validate($columns)) {
+							$failureMap = array_merge($failureMap, $referrerFK->getValidationFailures());
+						}
+					}
+				}
+
+				if ($this->collProjectUsers !== null) {
+					foreach ($this->collProjectUsers as $referrerFK) {
+						if (!$referrerFK->validate($columns)) {
+							$failureMap = array_merge($failureMap, $referrerFK->getValidationFailures());
+						}
+					}
+				}
+
+				if ($this->collTimetracks !== null) {
+					foreach ($this->collTimetracks as $referrerFK) {
+						if (!$referrerFK->validate($columns)) {
+							$failureMap = array_merge($failureMap, $referrerFK->getValidationFailures());
+						}
+					}
+				}
+
+				if ($this->collFilterHistorys !== null) {
+					foreach ($this->collFilterHistorys as $referrerFK) {
+						if (!$referrerFK->validate($columns)) {
+							$failureMap = array_merge($failureMap, $referrerFK->getValidationFailures());
+						}
+					}
+				}
+
+				if ($this->collProjectPermissions !== null) {
+					foreach ($this->collProjectPermissions as $referrerFK) {
 						if (!$referrerFK->validate($columns)) {
 							$failureMap = array_merge($failureMap, $referrerFK->getValidationFailures());
 						}
@@ -1476,14 +1732,62 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 				}
 			}
 
+			foreach ($this->getComponents() as $relObj) {
+				if ($relObj !== $this) {  // ensure that we don't try to copy a reference to ourselves
+					$copyObj->addComponent($relObj->copy($deepCopy));
+				}
+			}
+
 			$relObj = $this->getsfGuardUserProfile();
 			if ($relObj) {
 				$copyObj->setsfGuardUserProfile($relObj->copy($deepCopy));
 			}
 
+			foreach ($this->getTicketsRelatedByUserId() as $relObj) {
+				if ($relObj !== $this) {  // ensure that we don't try to copy a reference to ourselves
+					$copyObj->addTicketRelatedByUserId($relObj->copy($deepCopy));
+				}
+			}
+
+			foreach ($this->getTicketsRelatedByOwnerId() as $relObj) {
+				if ($relObj !== $this) {  // ensure that we don't try to copy a reference to ourselves
+					$copyObj->addTicketRelatedByOwnerId($relObj->copy($deepCopy));
+				}
+			}
+
+			foreach ($this->getTicketComments() as $relObj) {
+				if ($relObj !== $this) {  // ensure that we don't try to copy a reference to ourselves
+					$copyObj->addTicketComment($relObj->copy($deepCopy));
+				}
+			}
+
 			foreach ($this->getChangelogs() as $relObj) {
 				if ($relObj !== $this) {  // ensure that we don't try to copy a reference to ourselves
 					$copyObj->addChangelog($relObj->copy($deepCopy));
+				}
+			}
+
+			foreach ($this->getProjectUsers() as $relObj) {
+				if ($relObj !== $this) {  // ensure that we don't try to copy a reference to ourselves
+					$copyObj->addProjectUser($relObj->copy($deepCopy));
+				}
+			}
+
+			foreach ($this->getTimetracks() as $relObj) {
+				if ($relObj !== $this) {  // ensure that we don't try to copy a reference to ourselves
+					$copyObj->addTimetrack($relObj->copy($deepCopy));
+				}
+			}
+
+			foreach ($this->getFilterHistorys() as $relObj) {
+				if ($relObj !== $this) {  // ensure that we don't try to copy a reference to ourselves
+					$copyObj->addFilterHistory($relObj->copy($deepCopy));
+				}
+			}
+
+			foreach ($this->getProjectPermissions() as $relObj) {
+				if ($relObj !== $this) {  // ensure that we don't try to copy a reference to ourselves
+					$copyObj->addProjectPermission($relObj->copy($deepCopy));
 				}
 			}
 
@@ -1687,7 +1991,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 
 				$criteria->add(sfGuardUserPermissionPeer::USER_ID, $this->id);
 
-				$count = sfGuardUserPermissionPeer::doCount($criteria, $con);
+				$count = sfGuardUserPermissionPeer::doCount($criteria, false, $con);
 			}
 		} else {
 			// criteria has no effect for a new object
@@ -1700,7 +2004,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 				$criteria->add(sfGuardUserPermissionPeer::USER_ID, $this->id);
 
 				if (!isset($this->lastsfGuardUserPermissionCriteria) || !$this->lastsfGuardUserPermissionCriteria->equals($criteria)) {
-					$count = sfGuardUserPermissionPeer::doCount($criteria, $con);
+					$count = sfGuardUserPermissionPeer::doCount($criteria, false, $con);
 				} else {
 					$count = count($this->collsfGuardUserPermissions);
 				}
@@ -1888,7 +2192,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 
 				$criteria->add(sfGuardUserGroupPeer::USER_ID, $this->id);
 
-				$count = sfGuardUserGroupPeer::doCount($criteria, $con);
+				$count = sfGuardUserGroupPeer::doCount($criteria, false, $con);
 			}
 		} else {
 			// criteria has no effect for a new object
@@ -1901,7 +2205,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 				$criteria->add(sfGuardUserGroupPeer::USER_ID, $this->id);
 
 				if (!isset($this->lastsfGuardUserGroupCriteria) || !$this->lastsfGuardUserGroupCriteria->equals($criteria)) {
-					$count = sfGuardUserGroupPeer::doCount($criteria, $con);
+					$count = sfGuardUserGroupPeer::doCount($criteria, false, $con);
 				} else {
 					$count = count($this->collsfGuardUserGroups);
 				}
@@ -2089,7 +2393,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 
 				$criteria->add(sfGuardRememberKeyPeer::USER_ID, $this->id);
 
-				$count = sfGuardRememberKeyPeer::doCount($criteria, $con);
+				$count = sfGuardRememberKeyPeer::doCount($criteria, false, $con);
 			}
 		} else {
 			// criteria has no effect for a new object
@@ -2102,7 +2406,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 				$criteria->add(sfGuardRememberKeyPeer::USER_ID, $this->id);
 
 				if (!isset($this->lastsfGuardRememberKeyCriteria) || !$this->lastsfGuardRememberKeyCriteria->equals($criteria)) {
-					$count = sfGuardRememberKeyPeer::doCount($criteria, $con);
+					$count = sfGuardRememberKeyPeer::doCount($criteria, false, $con);
 				} else {
 					$count = count($this->collsfGuardRememberKeys);
 				}
@@ -2130,6 +2434,207 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 			array_push($this->collsfGuardRememberKeys, $l);
 			$l->setsfGuardUser($this);
 		}
+	}
+
+	/**
+	 * Clears out the collComponents collection (array).
+	 *
+	 * This does not modify the database; however, it will remove any associated objects, causing
+	 * them to be refetched by subsequent calls to accessor method.
+	 *
+	 * @return     void
+	 * @see        addComponents()
+	 */
+	public function clearComponents()
+	{
+		$this->collComponents = null; // important to set this to NULL since that means it is uninitialized
+	}
+
+	/**
+	 * Initializes the collComponents collection (array).
+	 *
+	 * By default this just sets the collComponents collection to an empty array (like clearcollComponents());
+	 * however, you may wish to override this method in your stub class to provide setting appropriate
+	 * to your application -- for example, setting the initial array to the values stored in database.
+	 *
+	 * @return     void
+	 */
+	public function initComponents()
+	{
+		$this->collComponents = array();
+	}
+
+	/**
+	 * Gets an array of Component objects which contain a foreign key that references this object.
+	 *
+	 * If this collection has already been initialized with an identical Criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser has previously been saved, it will retrieve
+	 * related Components from storage. If this sfGuardUser is new, it will return
+	 * an empty collection or the current collection, the criteria is ignored on a new object.
+	 *
+	 * @param      PropelPDO $con
+	 * @param      Criteria $criteria
+	 * @return     array Component[]
+	 * @throws     PropelException
+	 */
+	public function getComponents($criteria = null, PropelPDO $con = null)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collComponents === null) {
+			if ($this->isNew()) {
+			   $this->collComponents = array();
+			} else {
+
+				$criteria->add(ComponentPeer::OWNER_ID, $this->id);
+
+				ComponentPeer::addSelectColumns($criteria);
+				$this->collComponents = ComponentPeer::doSelect($criteria, $con);
+			}
+		} else {
+			// criteria has no effect for a new object
+			if (!$this->isNew()) {
+				// the following code is to determine if a new query is
+				// called for.  If the criteria is the same as the last
+				// one, just return the collection.
+
+
+				$criteria->add(ComponentPeer::OWNER_ID, $this->id);
+
+				ComponentPeer::addSelectColumns($criteria);
+				if (!isset($this->lastComponentCriteria) || !$this->lastComponentCriteria->equals($criteria)) {
+					$this->collComponents = ComponentPeer::doSelect($criteria, $con);
+				}
+			}
+		}
+		$this->lastComponentCriteria = $criteria;
+		return $this->collComponents;
+	}
+
+	/**
+	 * Returns the number of related Component objects.
+	 *
+	 * @param      Criteria $criteria
+	 * @param      boolean $distinct
+	 * @param      PropelPDO $con
+	 * @return     int Count of related Component objects.
+	 * @throws     PropelException
+	 */
+	public function countComponents(Criteria $criteria = null, $distinct = false, PropelPDO $con = null)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		} else {
+			$criteria = clone $criteria;
+		}
+
+		if ($distinct) {
+			$criteria->setDistinct();
+		}
+
+		$count = null;
+
+		if ($this->collComponents === null) {
+			if ($this->isNew()) {
+				$count = 0;
+			} else {
+
+				$criteria->add(ComponentPeer::OWNER_ID, $this->id);
+
+				$count = ComponentPeer::doCount($criteria, false, $con);
+			}
+		} else {
+			// criteria has no effect for a new object
+			if (!$this->isNew()) {
+				// the following code is to determine if a new query is
+				// called for.  If the criteria is the same as the last
+				// one, just return count of the collection.
+
+
+				$criteria->add(ComponentPeer::OWNER_ID, $this->id);
+
+				if (!isset($this->lastComponentCriteria) || !$this->lastComponentCriteria->equals($criteria)) {
+					$count = ComponentPeer::doCount($criteria, false, $con);
+				} else {
+					$count = count($this->collComponents);
+				}
+			} else {
+				$count = count($this->collComponents);
+			}
+		}
+		return $count;
+	}
+
+	/**
+	 * Method called to associate a Component object to this object
+	 * through the Component foreign key attribute.
+	 *
+	 * @param      Component $l Component
+	 * @return     void
+	 * @throws     PropelException
+	 */
+	public function addComponent(Component $l)
+	{
+		if ($this->collComponents === null) {
+			$this->initComponents();
+		}
+		if (!in_array($l, $this->collComponents, true)) { // only add it if the **same** object is not already associated
+			array_push($this->collComponents, $l);
+			$l->setsfGuardUser($this);
+		}
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser is new, it will return
+	 * an empty collection; or if this sfGuardUser has previously
+	 * been saved, it will retrieve related Components from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardUser.
+	 */
+	public function getComponentsJoinProject($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collComponents === null) {
+			if ($this->isNew()) {
+				$this->collComponents = array();
+			} else {
+
+				$criteria->add(ComponentPeer::OWNER_ID, $this->id);
+
+				$this->collComponents = ComponentPeer::doSelectJoinProject($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(ComponentPeer::OWNER_ID, $this->id);
+
+			if (!isset($this->lastComponentCriteria) || !$this->lastComponentCriteria->equals($criteria)) {
+				$this->collComponents = ComponentPeer::doSelectJoinProject($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastComponentCriteria = $criteria;
+
+		return $this->collComponents;
 	}
 
 	/**
@@ -2166,6 +2671,1079 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 		}
 
 		return $this;
+	}
+
+	/**
+	 * Clears out the collTicketsRelatedByUserId collection (array).
+	 *
+	 * This does not modify the database; however, it will remove any associated objects, causing
+	 * them to be refetched by subsequent calls to accessor method.
+	 *
+	 * @return     void
+	 * @see        addTicketsRelatedByUserId()
+	 */
+	public function clearTicketsRelatedByUserId()
+	{
+		$this->collTicketsRelatedByUserId = null; // important to set this to NULL since that means it is uninitialized
+	}
+
+	/**
+	 * Initializes the collTicketsRelatedByUserId collection (array).
+	 *
+	 * By default this just sets the collTicketsRelatedByUserId collection to an empty array (like clearcollTicketsRelatedByUserId());
+	 * however, you may wish to override this method in your stub class to provide setting appropriate
+	 * to your application -- for example, setting the initial array to the values stored in database.
+	 *
+	 * @return     void
+	 */
+	public function initTicketsRelatedByUserId()
+	{
+		$this->collTicketsRelatedByUserId = array();
+	}
+
+	/**
+	 * Gets an array of Ticket objects which contain a foreign key that references this object.
+	 *
+	 * If this collection has already been initialized with an identical Criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser has previously been saved, it will retrieve
+	 * related TicketsRelatedByUserId from storage. If this sfGuardUser is new, it will return
+	 * an empty collection or the current collection, the criteria is ignored on a new object.
+	 *
+	 * @param      PropelPDO $con
+	 * @param      Criteria $criteria
+	 * @return     array Ticket[]
+	 * @throws     PropelException
+	 */
+	public function getTicketsRelatedByUserId($criteria = null, PropelPDO $con = null)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collTicketsRelatedByUserId === null) {
+			if ($this->isNew()) {
+			   $this->collTicketsRelatedByUserId = array();
+			} else {
+
+				$criteria->add(TicketPeer::USER_ID, $this->id);
+
+				TicketPeer::addSelectColumns($criteria);
+				$this->collTicketsRelatedByUserId = TicketPeer::doSelect($criteria, $con);
+			}
+		} else {
+			// criteria has no effect for a new object
+			if (!$this->isNew()) {
+				// the following code is to determine if a new query is
+				// called for.  If the criteria is the same as the last
+				// one, just return the collection.
+
+
+				$criteria->add(TicketPeer::USER_ID, $this->id);
+
+				TicketPeer::addSelectColumns($criteria);
+				if (!isset($this->lastTicketRelatedByUserIdCriteria) || !$this->lastTicketRelatedByUserIdCriteria->equals($criteria)) {
+					$this->collTicketsRelatedByUserId = TicketPeer::doSelect($criteria, $con);
+				}
+			}
+		}
+		$this->lastTicketRelatedByUserIdCriteria = $criteria;
+		return $this->collTicketsRelatedByUserId;
+	}
+
+	/**
+	 * Returns the number of related Ticket objects.
+	 *
+	 * @param      Criteria $criteria
+	 * @param      boolean $distinct
+	 * @param      PropelPDO $con
+	 * @return     int Count of related Ticket objects.
+	 * @throws     PropelException
+	 */
+	public function countTicketsRelatedByUserId(Criteria $criteria = null, $distinct = false, PropelPDO $con = null)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		} else {
+			$criteria = clone $criteria;
+		}
+
+		if ($distinct) {
+			$criteria->setDistinct();
+		}
+
+		$count = null;
+
+		if ($this->collTicketsRelatedByUserId === null) {
+			if ($this->isNew()) {
+				$count = 0;
+			} else {
+
+				$criteria->add(TicketPeer::USER_ID, $this->id);
+
+				$count = TicketPeer::doCount($criteria, false, $con);
+			}
+		} else {
+			// criteria has no effect for a new object
+			if (!$this->isNew()) {
+				// the following code is to determine if a new query is
+				// called for.  If the criteria is the same as the last
+				// one, just return count of the collection.
+
+
+				$criteria->add(TicketPeer::USER_ID, $this->id);
+
+				if (!isset($this->lastTicketRelatedByUserIdCriteria) || !$this->lastTicketRelatedByUserIdCriteria->equals($criteria)) {
+					$count = TicketPeer::doCount($criteria, false, $con);
+				} else {
+					$count = count($this->collTicketsRelatedByUserId);
+				}
+			} else {
+				$count = count($this->collTicketsRelatedByUserId);
+			}
+		}
+		return $count;
+	}
+
+	/**
+	 * Method called to associate a Ticket object to this object
+	 * through the Ticket foreign key attribute.
+	 *
+	 * @param      Ticket $l Ticket
+	 * @return     void
+	 * @throws     PropelException
+	 */
+	public function addTicketRelatedByUserId(Ticket $l)
+	{
+		if ($this->collTicketsRelatedByUserId === null) {
+			$this->initTicketsRelatedByUserId();
+		}
+		if (!in_array($l, $this->collTicketsRelatedByUserId, true)) { // only add it if the **same** object is not already associated
+			array_push($this->collTicketsRelatedByUserId, $l);
+			$l->setsfGuardUserRelatedByUserId($this);
+		}
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser is new, it will return
+	 * an empty collection; or if this sfGuardUser has previously
+	 * been saved, it will retrieve related TicketsRelatedByUserId from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardUser.
+	 */
+	public function getTicketsRelatedByUserIdJoinComponent($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collTicketsRelatedByUserId === null) {
+			if ($this->isNew()) {
+				$this->collTicketsRelatedByUserId = array();
+			} else {
+
+				$criteria->add(TicketPeer::USER_ID, $this->id);
+
+				$this->collTicketsRelatedByUserId = TicketPeer::doSelectJoinComponent($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(TicketPeer::USER_ID, $this->id);
+
+			if (!isset($this->lastTicketRelatedByUserIdCriteria) || !$this->lastTicketRelatedByUserIdCriteria->equals($criteria)) {
+				$this->collTicketsRelatedByUserId = TicketPeer::doSelectJoinComponent($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastTicketRelatedByUserIdCriteria = $criteria;
+
+		return $this->collTicketsRelatedByUserId;
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser is new, it will return
+	 * an empty collection; or if this sfGuardUser has previously
+	 * been saved, it will retrieve related TicketsRelatedByUserId from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardUser.
+	 */
+	public function getTicketsRelatedByUserIdJoinTicketType($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collTicketsRelatedByUserId === null) {
+			if ($this->isNew()) {
+				$this->collTicketsRelatedByUserId = array();
+			} else {
+
+				$criteria->add(TicketPeer::USER_ID, $this->id);
+
+				$this->collTicketsRelatedByUserId = TicketPeer::doSelectJoinTicketType($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(TicketPeer::USER_ID, $this->id);
+
+			if (!isset($this->lastTicketRelatedByUserIdCriteria) || !$this->lastTicketRelatedByUserIdCriteria->equals($criteria)) {
+				$this->collTicketsRelatedByUserId = TicketPeer::doSelectJoinTicketType($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastTicketRelatedByUserIdCriteria = $criteria;
+
+		return $this->collTicketsRelatedByUserId;
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser is new, it will return
+	 * an empty collection; or if this sfGuardUser has previously
+	 * been saved, it will retrieve related TicketsRelatedByUserId from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardUser.
+	 */
+	public function getTicketsRelatedByUserIdJoinTicketPriority($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collTicketsRelatedByUserId === null) {
+			if ($this->isNew()) {
+				$this->collTicketsRelatedByUserId = array();
+			} else {
+
+				$criteria->add(TicketPeer::USER_ID, $this->id);
+
+				$this->collTicketsRelatedByUserId = TicketPeer::doSelectJoinTicketPriority($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(TicketPeer::USER_ID, $this->id);
+
+			if (!isset($this->lastTicketRelatedByUserIdCriteria) || !$this->lastTicketRelatedByUserIdCriteria->equals($criteria)) {
+				$this->collTicketsRelatedByUserId = TicketPeer::doSelectJoinTicketPriority($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastTicketRelatedByUserIdCriteria = $criteria;
+
+		return $this->collTicketsRelatedByUserId;
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser is new, it will return
+	 * an empty collection; or if this sfGuardUser has previously
+	 * been saved, it will retrieve related TicketsRelatedByUserId from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardUser.
+	 */
+	public function getTicketsRelatedByUserIdJoinTicketResolution($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collTicketsRelatedByUserId === null) {
+			if ($this->isNew()) {
+				$this->collTicketsRelatedByUserId = array();
+			} else {
+
+				$criteria->add(TicketPeer::USER_ID, $this->id);
+
+				$this->collTicketsRelatedByUserId = TicketPeer::doSelectJoinTicketResolution($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(TicketPeer::USER_ID, $this->id);
+
+			if (!isset($this->lastTicketRelatedByUserIdCriteria) || !$this->lastTicketRelatedByUserIdCriteria->equals($criteria)) {
+				$this->collTicketsRelatedByUserId = TicketPeer::doSelectJoinTicketResolution($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastTicketRelatedByUserIdCriteria = $criteria;
+
+		return $this->collTicketsRelatedByUserId;
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser is new, it will return
+	 * an empty collection; or if this sfGuardUser has previously
+	 * been saved, it will retrieve related TicketsRelatedByUserId from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardUser.
+	 */
+	public function getTicketsRelatedByUserIdJoinTicketResolveAs($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collTicketsRelatedByUserId === null) {
+			if ($this->isNew()) {
+				$this->collTicketsRelatedByUserId = array();
+			} else {
+
+				$criteria->add(TicketPeer::USER_ID, $this->id);
+
+				$this->collTicketsRelatedByUserId = TicketPeer::doSelectJoinTicketResolveAs($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(TicketPeer::USER_ID, $this->id);
+
+			if (!isset($this->lastTicketRelatedByUserIdCriteria) || !$this->lastTicketRelatedByUserIdCriteria->equals($criteria)) {
+				$this->collTicketsRelatedByUserId = TicketPeer::doSelectJoinTicketResolveAs($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastTicketRelatedByUserIdCriteria = $criteria;
+
+		return $this->collTicketsRelatedByUserId;
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser is new, it will return
+	 * an empty collection; or if this sfGuardUser has previously
+	 * been saved, it will retrieve related TicketsRelatedByUserId from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardUser.
+	 */
+	public function getTicketsRelatedByUserIdJoinTicketMilestone($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collTicketsRelatedByUserId === null) {
+			if ($this->isNew()) {
+				$this->collTicketsRelatedByUserId = array();
+			} else {
+
+				$criteria->add(TicketPeer::USER_ID, $this->id);
+
+				$this->collTicketsRelatedByUserId = TicketPeer::doSelectJoinTicketMilestone($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(TicketPeer::USER_ID, $this->id);
+
+			if (!isset($this->lastTicketRelatedByUserIdCriteria) || !$this->lastTicketRelatedByUserIdCriteria->equals($criteria)) {
+				$this->collTicketsRelatedByUserId = TicketPeer::doSelectJoinTicketMilestone($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastTicketRelatedByUserIdCriteria = $criteria;
+
+		return $this->collTicketsRelatedByUserId;
+	}
+
+	/**
+	 * Clears out the collTicketsRelatedByOwnerId collection (array).
+	 *
+	 * This does not modify the database; however, it will remove any associated objects, causing
+	 * them to be refetched by subsequent calls to accessor method.
+	 *
+	 * @return     void
+	 * @see        addTicketsRelatedByOwnerId()
+	 */
+	public function clearTicketsRelatedByOwnerId()
+	{
+		$this->collTicketsRelatedByOwnerId = null; // important to set this to NULL since that means it is uninitialized
+	}
+
+	/**
+	 * Initializes the collTicketsRelatedByOwnerId collection (array).
+	 *
+	 * By default this just sets the collTicketsRelatedByOwnerId collection to an empty array (like clearcollTicketsRelatedByOwnerId());
+	 * however, you may wish to override this method in your stub class to provide setting appropriate
+	 * to your application -- for example, setting the initial array to the values stored in database.
+	 *
+	 * @return     void
+	 */
+	public function initTicketsRelatedByOwnerId()
+	{
+		$this->collTicketsRelatedByOwnerId = array();
+	}
+
+	/**
+	 * Gets an array of Ticket objects which contain a foreign key that references this object.
+	 *
+	 * If this collection has already been initialized with an identical Criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser has previously been saved, it will retrieve
+	 * related TicketsRelatedByOwnerId from storage. If this sfGuardUser is new, it will return
+	 * an empty collection or the current collection, the criteria is ignored on a new object.
+	 *
+	 * @param      PropelPDO $con
+	 * @param      Criteria $criteria
+	 * @return     array Ticket[]
+	 * @throws     PropelException
+	 */
+	public function getTicketsRelatedByOwnerId($criteria = null, PropelPDO $con = null)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collTicketsRelatedByOwnerId === null) {
+			if ($this->isNew()) {
+			   $this->collTicketsRelatedByOwnerId = array();
+			} else {
+
+				$criteria->add(TicketPeer::OWNER_ID, $this->id);
+
+				TicketPeer::addSelectColumns($criteria);
+				$this->collTicketsRelatedByOwnerId = TicketPeer::doSelect($criteria, $con);
+			}
+		} else {
+			// criteria has no effect for a new object
+			if (!$this->isNew()) {
+				// the following code is to determine if a new query is
+				// called for.  If the criteria is the same as the last
+				// one, just return the collection.
+
+
+				$criteria->add(TicketPeer::OWNER_ID, $this->id);
+
+				TicketPeer::addSelectColumns($criteria);
+				if (!isset($this->lastTicketRelatedByOwnerIdCriteria) || !$this->lastTicketRelatedByOwnerIdCriteria->equals($criteria)) {
+					$this->collTicketsRelatedByOwnerId = TicketPeer::doSelect($criteria, $con);
+				}
+			}
+		}
+		$this->lastTicketRelatedByOwnerIdCriteria = $criteria;
+		return $this->collTicketsRelatedByOwnerId;
+	}
+
+	/**
+	 * Returns the number of related Ticket objects.
+	 *
+	 * @param      Criteria $criteria
+	 * @param      boolean $distinct
+	 * @param      PropelPDO $con
+	 * @return     int Count of related Ticket objects.
+	 * @throws     PropelException
+	 */
+	public function countTicketsRelatedByOwnerId(Criteria $criteria = null, $distinct = false, PropelPDO $con = null)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		} else {
+			$criteria = clone $criteria;
+		}
+
+		if ($distinct) {
+			$criteria->setDistinct();
+		}
+
+		$count = null;
+
+		if ($this->collTicketsRelatedByOwnerId === null) {
+			if ($this->isNew()) {
+				$count = 0;
+			} else {
+
+				$criteria->add(TicketPeer::OWNER_ID, $this->id);
+
+				$count = TicketPeer::doCount($criteria, false, $con);
+			}
+		} else {
+			// criteria has no effect for a new object
+			if (!$this->isNew()) {
+				// the following code is to determine if a new query is
+				// called for.  If the criteria is the same as the last
+				// one, just return count of the collection.
+
+
+				$criteria->add(TicketPeer::OWNER_ID, $this->id);
+
+				if (!isset($this->lastTicketRelatedByOwnerIdCriteria) || !$this->lastTicketRelatedByOwnerIdCriteria->equals($criteria)) {
+					$count = TicketPeer::doCount($criteria, false, $con);
+				} else {
+					$count = count($this->collTicketsRelatedByOwnerId);
+				}
+			} else {
+				$count = count($this->collTicketsRelatedByOwnerId);
+			}
+		}
+		return $count;
+	}
+
+	/**
+	 * Method called to associate a Ticket object to this object
+	 * through the Ticket foreign key attribute.
+	 *
+	 * @param      Ticket $l Ticket
+	 * @return     void
+	 * @throws     PropelException
+	 */
+	public function addTicketRelatedByOwnerId(Ticket $l)
+	{
+		if ($this->collTicketsRelatedByOwnerId === null) {
+			$this->initTicketsRelatedByOwnerId();
+		}
+		if (!in_array($l, $this->collTicketsRelatedByOwnerId, true)) { // only add it if the **same** object is not already associated
+			array_push($this->collTicketsRelatedByOwnerId, $l);
+			$l->setsfGuardUserRelatedByOwnerId($this);
+		}
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser is new, it will return
+	 * an empty collection; or if this sfGuardUser has previously
+	 * been saved, it will retrieve related TicketsRelatedByOwnerId from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardUser.
+	 */
+	public function getTicketsRelatedByOwnerIdJoinComponent($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collTicketsRelatedByOwnerId === null) {
+			if ($this->isNew()) {
+				$this->collTicketsRelatedByOwnerId = array();
+			} else {
+
+				$criteria->add(TicketPeer::OWNER_ID, $this->id);
+
+				$this->collTicketsRelatedByOwnerId = TicketPeer::doSelectJoinComponent($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(TicketPeer::OWNER_ID, $this->id);
+
+			if (!isset($this->lastTicketRelatedByOwnerIdCriteria) || !$this->lastTicketRelatedByOwnerIdCriteria->equals($criteria)) {
+				$this->collTicketsRelatedByOwnerId = TicketPeer::doSelectJoinComponent($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastTicketRelatedByOwnerIdCriteria = $criteria;
+
+		return $this->collTicketsRelatedByOwnerId;
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser is new, it will return
+	 * an empty collection; or if this sfGuardUser has previously
+	 * been saved, it will retrieve related TicketsRelatedByOwnerId from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardUser.
+	 */
+	public function getTicketsRelatedByOwnerIdJoinTicketType($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collTicketsRelatedByOwnerId === null) {
+			if ($this->isNew()) {
+				$this->collTicketsRelatedByOwnerId = array();
+			} else {
+
+				$criteria->add(TicketPeer::OWNER_ID, $this->id);
+
+				$this->collTicketsRelatedByOwnerId = TicketPeer::doSelectJoinTicketType($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(TicketPeer::OWNER_ID, $this->id);
+
+			if (!isset($this->lastTicketRelatedByOwnerIdCriteria) || !$this->lastTicketRelatedByOwnerIdCriteria->equals($criteria)) {
+				$this->collTicketsRelatedByOwnerId = TicketPeer::doSelectJoinTicketType($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastTicketRelatedByOwnerIdCriteria = $criteria;
+
+		return $this->collTicketsRelatedByOwnerId;
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser is new, it will return
+	 * an empty collection; or if this sfGuardUser has previously
+	 * been saved, it will retrieve related TicketsRelatedByOwnerId from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardUser.
+	 */
+	public function getTicketsRelatedByOwnerIdJoinTicketPriority($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collTicketsRelatedByOwnerId === null) {
+			if ($this->isNew()) {
+				$this->collTicketsRelatedByOwnerId = array();
+			} else {
+
+				$criteria->add(TicketPeer::OWNER_ID, $this->id);
+
+				$this->collTicketsRelatedByOwnerId = TicketPeer::doSelectJoinTicketPriority($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(TicketPeer::OWNER_ID, $this->id);
+
+			if (!isset($this->lastTicketRelatedByOwnerIdCriteria) || !$this->lastTicketRelatedByOwnerIdCriteria->equals($criteria)) {
+				$this->collTicketsRelatedByOwnerId = TicketPeer::doSelectJoinTicketPriority($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastTicketRelatedByOwnerIdCriteria = $criteria;
+
+		return $this->collTicketsRelatedByOwnerId;
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser is new, it will return
+	 * an empty collection; or if this sfGuardUser has previously
+	 * been saved, it will retrieve related TicketsRelatedByOwnerId from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardUser.
+	 */
+	public function getTicketsRelatedByOwnerIdJoinTicketResolution($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collTicketsRelatedByOwnerId === null) {
+			if ($this->isNew()) {
+				$this->collTicketsRelatedByOwnerId = array();
+			} else {
+
+				$criteria->add(TicketPeer::OWNER_ID, $this->id);
+
+				$this->collTicketsRelatedByOwnerId = TicketPeer::doSelectJoinTicketResolution($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(TicketPeer::OWNER_ID, $this->id);
+
+			if (!isset($this->lastTicketRelatedByOwnerIdCriteria) || !$this->lastTicketRelatedByOwnerIdCriteria->equals($criteria)) {
+				$this->collTicketsRelatedByOwnerId = TicketPeer::doSelectJoinTicketResolution($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastTicketRelatedByOwnerIdCriteria = $criteria;
+
+		return $this->collTicketsRelatedByOwnerId;
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser is new, it will return
+	 * an empty collection; or if this sfGuardUser has previously
+	 * been saved, it will retrieve related TicketsRelatedByOwnerId from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardUser.
+	 */
+	public function getTicketsRelatedByOwnerIdJoinTicketResolveAs($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collTicketsRelatedByOwnerId === null) {
+			if ($this->isNew()) {
+				$this->collTicketsRelatedByOwnerId = array();
+			} else {
+
+				$criteria->add(TicketPeer::OWNER_ID, $this->id);
+
+				$this->collTicketsRelatedByOwnerId = TicketPeer::doSelectJoinTicketResolveAs($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(TicketPeer::OWNER_ID, $this->id);
+
+			if (!isset($this->lastTicketRelatedByOwnerIdCriteria) || !$this->lastTicketRelatedByOwnerIdCriteria->equals($criteria)) {
+				$this->collTicketsRelatedByOwnerId = TicketPeer::doSelectJoinTicketResolveAs($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastTicketRelatedByOwnerIdCriteria = $criteria;
+
+		return $this->collTicketsRelatedByOwnerId;
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser is new, it will return
+	 * an empty collection; or if this sfGuardUser has previously
+	 * been saved, it will retrieve related TicketsRelatedByOwnerId from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardUser.
+	 */
+	public function getTicketsRelatedByOwnerIdJoinTicketMilestone($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collTicketsRelatedByOwnerId === null) {
+			if ($this->isNew()) {
+				$this->collTicketsRelatedByOwnerId = array();
+			} else {
+
+				$criteria->add(TicketPeer::OWNER_ID, $this->id);
+
+				$this->collTicketsRelatedByOwnerId = TicketPeer::doSelectJoinTicketMilestone($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(TicketPeer::OWNER_ID, $this->id);
+
+			if (!isset($this->lastTicketRelatedByOwnerIdCriteria) || !$this->lastTicketRelatedByOwnerIdCriteria->equals($criteria)) {
+				$this->collTicketsRelatedByOwnerId = TicketPeer::doSelectJoinTicketMilestone($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastTicketRelatedByOwnerIdCriteria = $criteria;
+
+		return $this->collTicketsRelatedByOwnerId;
+	}
+
+	/**
+	 * Clears out the collTicketComments collection (array).
+	 *
+	 * This does not modify the database; however, it will remove any associated objects, causing
+	 * them to be refetched by subsequent calls to accessor method.
+	 *
+	 * @return     void
+	 * @see        addTicketComments()
+	 */
+	public function clearTicketComments()
+	{
+		$this->collTicketComments = null; // important to set this to NULL since that means it is uninitialized
+	}
+
+	/**
+	 * Initializes the collTicketComments collection (array).
+	 *
+	 * By default this just sets the collTicketComments collection to an empty array (like clearcollTicketComments());
+	 * however, you may wish to override this method in your stub class to provide setting appropriate
+	 * to your application -- for example, setting the initial array to the values stored in database.
+	 *
+	 * @return     void
+	 */
+	public function initTicketComments()
+	{
+		$this->collTicketComments = array();
+	}
+
+	/**
+	 * Gets an array of TicketComment objects which contain a foreign key that references this object.
+	 *
+	 * If this collection has already been initialized with an identical Criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser has previously been saved, it will retrieve
+	 * related TicketComments from storage. If this sfGuardUser is new, it will return
+	 * an empty collection or the current collection, the criteria is ignored on a new object.
+	 *
+	 * @param      PropelPDO $con
+	 * @param      Criteria $criteria
+	 * @return     array TicketComment[]
+	 * @throws     PropelException
+	 */
+	public function getTicketComments($criteria = null, PropelPDO $con = null)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collTicketComments === null) {
+			if ($this->isNew()) {
+			   $this->collTicketComments = array();
+			} else {
+
+				$criteria->add(TicketCommentPeer::USER_ID, $this->id);
+
+				TicketCommentPeer::addSelectColumns($criteria);
+				$this->collTicketComments = TicketCommentPeer::doSelect($criteria, $con);
+			}
+		} else {
+			// criteria has no effect for a new object
+			if (!$this->isNew()) {
+				// the following code is to determine if a new query is
+				// called for.  If the criteria is the same as the last
+				// one, just return the collection.
+
+
+				$criteria->add(TicketCommentPeer::USER_ID, $this->id);
+
+				TicketCommentPeer::addSelectColumns($criteria);
+				if (!isset($this->lastTicketCommentCriteria) || !$this->lastTicketCommentCriteria->equals($criteria)) {
+					$this->collTicketComments = TicketCommentPeer::doSelect($criteria, $con);
+				}
+			}
+		}
+		$this->lastTicketCommentCriteria = $criteria;
+		return $this->collTicketComments;
+	}
+
+	/**
+	 * Returns the number of related TicketComment objects.
+	 *
+	 * @param      Criteria $criteria
+	 * @param      boolean $distinct
+	 * @param      PropelPDO $con
+	 * @return     int Count of related TicketComment objects.
+	 * @throws     PropelException
+	 */
+	public function countTicketComments(Criteria $criteria = null, $distinct = false, PropelPDO $con = null)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		} else {
+			$criteria = clone $criteria;
+		}
+
+		if ($distinct) {
+			$criteria->setDistinct();
+		}
+
+		$count = null;
+
+		if ($this->collTicketComments === null) {
+			if ($this->isNew()) {
+				$count = 0;
+			} else {
+
+				$criteria->add(TicketCommentPeer::USER_ID, $this->id);
+
+				$count = TicketCommentPeer::doCount($criteria, false, $con);
+			}
+		} else {
+			// criteria has no effect for a new object
+			if (!$this->isNew()) {
+				// the following code is to determine if a new query is
+				// called for.  If the criteria is the same as the last
+				// one, just return count of the collection.
+
+
+				$criteria->add(TicketCommentPeer::USER_ID, $this->id);
+
+				if (!isset($this->lastTicketCommentCriteria) || !$this->lastTicketCommentCriteria->equals($criteria)) {
+					$count = TicketCommentPeer::doCount($criteria, false, $con);
+				} else {
+					$count = count($this->collTicketComments);
+				}
+			} else {
+				$count = count($this->collTicketComments);
+			}
+		}
+		return $count;
+	}
+
+	/**
+	 * Method called to associate a TicketComment object to this object
+	 * through the TicketComment foreign key attribute.
+	 *
+	 * @param      TicketComment $l TicketComment
+	 * @return     void
+	 * @throws     PropelException
+	 */
+	public function addTicketComment(TicketComment $l)
+	{
+		if ($this->collTicketComments === null) {
+			$this->initTicketComments();
+		}
+		if (!in_array($l, $this->collTicketComments, true)) { // only add it if the **same** object is not already associated
+			array_push($this->collTicketComments, $l);
+			$l->setsfGuardUser($this);
+		}
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser is new, it will return
+	 * an empty collection; or if this sfGuardUser has previously
+	 * been saved, it will retrieve related TicketComments from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardUser.
+	 */
+	public function getTicketCommentsJoinTicket($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collTicketComments === null) {
+			if ($this->isNew()) {
+				$this->collTicketComments = array();
+			} else {
+
+				$criteria->add(TicketCommentPeer::USER_ID, $this->id);
+
+				$this->collTicketComments = TicketCommentPeer::doSelectJoinTicket($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(TicketCommentPeer::USER_ID, $this->id);
+
+			if (!isset($this->lastTicketCommentCriteria) || !$this->lastTicketCommentCriteria->equals($criteria)) {
+				$this->collTicketComments = TicketCommentPeer::doSelectJoinTicket($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastTicketCommentCriteria = $criteria;
+
+		return $this->collTicketComments;
 	}
 
 	/**
@@ -2279,7 +3857,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 
 				$criteria->add(ChangelogPeer::USER_ID, $this->id);
 
-				$count = ChangelogPeer::doCount($criteria, $con);
+				$count = ChangelogPeer::doCount($criteria, false, $con);
 			}
 		} else {
 			// criteria has no effect for a new object
@@ -2292,7 +3870,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 				$criteria->add(ChangelogPeer::USER_ID, $this->id);
 
 				if (!isset($this->lastChangelogCriteria) || !$this->lastChangelogCriteria->equals($criteria)) {
-					$count = ChangelogPeer::doCount($criteria, $con);
+					$count = ChangelogPeer::doCount($criteria, false, $con);
 				} else {
 					$count = count($this->collChangelogs);
 				}
@@ -2320,6 +3898,904 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 			array_push($this->collChangelogs, $l);
 			$l->setsfGuardUser($this);
 		}
+	}
+
+	/**
+	 * Clears out the collProjectUsers collection (array).
+	 *
+	 * This does not modify the database; however, it will remove any associated objects, causing
+	 * them to be refetched by subsequent calls to accessor method.
+	 *
+	 * @return     void
+	 * @see        addProjectUsers()
+	 */
+	public function clearProjectUsers()
+	{
+		$this->collProjectUsers = null; // important to set this to NULL since that means it is uninitialized
+	}
+
+	/**
+	 * Initializes the collProjectUsers collection (array).
+	 *
+	 * By default this just sets the collProjectUsers collection to an empty array (like clearcollProjectUsers());
+	 * however, you may wish to override this method in your stub class to provide setting appropriate
+	 * to your application -- for example, setting the initial array to the values stored in database.
+	 *
+	 * @return     void
+	 */
+	public function initProjectUsers()
+	{
+		$this->collProjectUsers = array();
+	}
+
+	/**
+	 * Gets an array of ProjectUser objects which contain a foreign key that references this object.
+	 *
+	 * If this collection has already been initialized with an identical Criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser has previously been saved, it will retrieve
+	 * related ProjectUsers from storage. If this sfGuardUser is new, it will return
+	 * an empty collection or the current collection, the criteria is ignored on a new object.
+	 *
+	 * @param      PropelPDO $con
+	 * @param      Criteria $criteria
+	 * @return     array ProjectUser[]
+	 * @throws     PropelException
+	 */
+	public function getProjectUsers($criteria = null, PropelPDO $con = null)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collProjectUsers === null) {
+			if ($this->isNew()) {
+			   $this->collProjectUsers = array();
+			} else {
+
+				$criteria->add(ProjectUserPeer::USER_ID, $this->id);
+
+				ProjectUserPeer::addSelectColumns($criteria);
+				$this->collProjectUsers = ProjectUserPeer::doSelect($criteria, $con);
+			}
+		} else {
+			// criteria has no effect for a new object
+			if (!$this->isNew()) {
+				// the following code is to determine if a new query is
+				// called for.  If the criteria is the same as the last
+				// one, just return the collection.
+
+
+				$criteria->add(ProjectUserPeer::USER_ID, $this->id);
+
+				ProjectUserPeer::addSelectColumns($criteria);
+				if (!isset($this->lastProjectUserCriteria) || !$this->lastProjectUserCriteria->equals($criteria)) {
+					$this->collProjectUsers = ProjectUserPeer::doSelect($criteria, $con);
+				}
+			}
+		}
+		$this->lastProjectUserCriteria = $criteria;
+		return $this->collProjectUsers;
+	}
+
+	/**
+	 * Returns the number of related ProjectUser objects.
+	 *
+	 * @param      Criteria $criteria
+	 * @param      boolean $distinct
+	 * @param      PropelPDO $con
+	 * @return     int Count of related ProjectUser objects.
+	 * @throws     PropelException
+	 */
+	public function countProjectUsers(Criteria $criteria = null, $distinct = false, PropelPDO $con = null)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		} else {
+			$criteria = clone $criteria;
+		}
+
+		if ($distinct) {
+			$criteria->setDistinct();
+		}
+
+		$count = null;
+
+		if ($this->collProjectUsers === null) {
+			if ($this->isNew()) {
+				$count = 0;
+			} else {
+
+				$criteria->add(ProjectUserPeer::USER_ID, $this->id);
+
+				$count = ProjectUserPeer::doCount($criteria, false, $con);
+			}
+		} else {
+			// criteria has no effect for a new object
+			if (!$this->isNew()) {
+				// the following code is to determine if a new query is
+				// called for.  If the criteria is the same as the last
+				// one, just return count of the collection.
+
+
+				$criteria->add(ProjectUserPeer::USER_ID, $this->id);
+
+				if (!isset($this->lastProjectUserCriteria) || !$this->lastProjectUserCriteria->equals($criteria)) {
+					$count = ProjectUserPeer::doCount($criteria, false, $con);
+				} else {
+					$count = count($this->collProjectUsers);
+				}
+			} else {
+				$count = count($this->collProjectUsers);
+			}
+		}
+		return $count;
+	}
+
+	/**
+	 * Method called to associate a ProjectUser object to this object
+	 * through the ProjectUser foreign key attribute.
+	 *
+	 * @param      ProjectUser $l ProjectUser
+	 * @return     void
+	 * @throws     PropelException
+	 */
+	public function addProjectUser(ProjectUser $l)
+	{
+		if ($this->collProjectUsers === null) {
+			$this->initProjectUsers();
+		}
+		if (!in_array($l, $this->collProjectUsers, true)) { // only add it if the **same** object is not already associated
+			array_push($this->collProjectUsers, $l);
+			$l->setsfGuardUser($this);
+		}
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser is new, it will return
+	 * an empty collection; or if this sfGuardUser has previously
+	 * been saved, it will retrieve related ProjectUsers from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardUser.
+	 */
+	public function getProjectUsersJoinProject($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collProjectUsers === null) {
+			if ($this->isNew()) {
+				$this->collProjectUsers = array();
+			} else {
+
+				$criteria->add(ProjectUserPeer::USER_ID, $this->id);
+
+				$this->collProjectUsers = ProjectUserPeer::doSelectJoinProject($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(ProjectUserPeer::USER_ID, $this->id);
+
+			if (!isset($this->lastProjectUserCriteria) || !$this->lastProjectUserCriteria->equals($criteria)) {
+				$this->collProjectUsers = ProjectUserPeer::doSelectJoinProject($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastProjectUserCriteria = $criteria;
+
+		return $this->collProjectUsers;
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser is new, it will return
+	 * an empty collection; or if this sfGuardUser has previously
+	 * been saved, it will retrieve related ProjectUsers from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardUser.
+	 */
+	public function getProjectUsersJoinsfGuardGroup($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collProjectUsers === null) {
+			if ($this->isNew()) {
+				$this->collProjectUsers = array();
+			} else {
+
+				$criteria->add(ProjectUserPeer::USER_ID, $this->id);
+
+				$this->collProjectUsers = ProjectUserPeer::doSelectJoinsfGuardGroup($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(ProjectUserPeer::USER_ID, $this->id);
+
+			if (!isset($this->lastProjectUserCriteria) || !$this->lastProjectUserCriteria->equals($criteria)) {
+				$this->collProjectUsers = ProjectUserPeer::doSelectJoinsfGuardGroup($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastProjectUserCriteria = $criteria;
+
+		return $this->collProjectUsers;
+	}
+
+	/**
+	 * Clears out the collTimetracks collection (array).
+	 *
+	 * This does not modify the database; however, it will remove any associated objects, causing
+	 * them to be refetched by subsequent calls to accessor method.
+	 *
+	 * @return     void
+	 * @see        addTimetracks()
+	 */
+	public function clearTimetracks()
+	{
+		$this->collTimetracks = null; // important to set this to NULL since that means it is uninitialized
+	}
+
+	/**
+	 * Initializes the collTimetracks collection (array).
+	 *
+	 * By default this just sets the collTimetracks collection to an empty array (like clearcollTimetracks());
+	 * however, you may wish to override this method in your stub class to provide setting appropriate
+	 * to your application -- for example, setting the initial array to the values stored in database.
+	 *
+	 * @return     void
+	 */
+	public function initTimetracks()
+	{
+		$this->collTimetracks = array();
+	}
+
+	/**
+	 * Gets an array of Timetrack objects which contain a foreign key that references this object.
+	 *
+	 * If this collection has already been initialized with an identical Criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser has previously been saved, it will retrieve
+	 * related Timetracks from storage. If this sfGuardUser is new, it will return
+	 * an empty collection or the current collection, the criteria is ignored on a new object.
+	 *
+	 * @param      PropelPDO $con
+	 * @param      Criteria $criteria
+	 * @return     array Timetrack[]
+	 * @throws     PropelException
+	 */
+	public function getTimetracks($criteria = null, PropelPDO $con = null)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collTimetracks === null) {
+			if ($this->isNew()) {
+			   $this->collTimetracks = array();
+			} else {
+
+				$criteria->add(TimetrackPeer::USER_ID, $this->id);
+
+				TimetrackPeer::addSelectColumns($criteria);
+				$this->collTimetracks = TimetrackPeer::doSelect($criteria, $con);
+			}
+		} else {
+			// criteria has no effect for a new object
+			if (!$this->isNew()) {
+				// the following code is to determine if a new query is
+				// called for.  If the criteria is the same as the last
+				// one, just return the collection.
+
+
+				$criteria->add(TimetrackPeer::USER_ID, $this->id);
+
+				TimetrackPeer::addSelectColumns($criteria);
+				if (!isset($this->lastTimetrackCriteria) || !$this->lastTimetrackCriteria->equals($criteria)) {
+					$this->collTimetracks = TimetrackPeer::doSelect($criteria, $con);
+				}
+			}
+		}
+		$this->lastTimetrackCriteria = $criteria;
+		return $this->collTimetracks;
+	}
+
+	/**
+	 * Returns the number of related Timetrack objects.
+	 *
+	 * @param      Criteria $criteria
+	 * @param      boolean $distinct
+	 * @param      PropelPDO $con
+	 * @return     int Count of related Timetrack objects.
+	 * @throws     PropelException
+	 */
+	public function countTimetracks(Criteria $criteria = null, $distinct = false, PropelPDO $con = null)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		} else {
+			$criteria = clone $criteria;
+		}
+
+		if ($distinct) {
+			$criteria->setDistinct();
+		}
+
+		$count = null;
+
+		if ($this->collTimetracks === null) {
+			if ($this->isNew()) {
+				$count = 0;
+			} else {
+
+				$criteria->add(TimetrackPeer::USER_ID, $this->id);
+
+				$count = TimetrackPeer::doCount($criteria, false, $con);
+			}
+		} else {
+			// criteria has no effect for a new object
+			if (!$this->isNew()) {
+				// the following code is to determine if a new query is
+				// called for.  If the criteria is the same as the last
+				// one, just return count of the collection.
+
+
+				$criteria->add(TimetrackPeer::USER_ID, $this->id);
+
+				if (!isset($this->lastTimetrackCriteria) || !$this->lastTimetrackCriteria->equals($criteria)) {
+					$count = TimetrackPeer::doCount($criteria, false, $con);
+				} else {
+					$count = count($this->collTimetracks);
+				}
+			} else {
+				$count = count($this->collTimetracks);
+			}
+		}
+		return $count;
+	}
+
+	/**
+	 * Method called to associate a Timetrack object to this object
+	 * through the Timetrack foreign key attribute.
+	 *
+	 * @param      Timetrack $l Timetrack
+	 * @return     void
+	 * @throws     PropelException
+	 */
+	public function addTimetrack(Timetrack $l)
+	{
+		if ($this->collTimetracks === null) {
+			$this->initTimetracks();
+		}
+		if (!in_array($l, $this->collTimetracks, true)) { // only add it if the **same** object is not already associated
+			array_push($this->collTimetracks, $l);
+			$l->setsfGuardUser($this);
+		}
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser is new, it will return
+	 * an empty collection; or if this sfGuardUser has previously
+	 * been saved, it will retrieve related Timetracks from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardUser.
+	 */
+	public function getTimetracksJoinProject($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collTimetracks === null) {
+			if ($this->isNew()) {
+				$this->collTimetracks = array();
+			} else {
+
+				$criteria->add(TimetrackPeer::USER_ID, $this->id);
+
+				$this->collTimetracks = TimetrackPeer::doSelectJoinProject($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(TimetrackPeer::USER_ID, $this->id);
+
+			if (!isset($this->lastTimetrackCriteria) || !$this->lastTimetrackCriteria->equals($criteria)) {
+				$this->collTimetracks = TimetrackPeer::doSelectJoinProject($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastTimetrackCriteria = $criteria;
+
+		return $this->collTimetracks;
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser is new, it will return
+	 * an empty collection; or if this sfGuardUser has previously
+	 * been saved, it will retrieve related Timetracks from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardUser.
+	 */
+	public function getTimetracksJoinTicketMilestone($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collTimetracks === null) {
+			if ($this->isNew()) {
+				$this->collTimetracks = array();
+			} else {
+
+				$criteria->add(TimetrackPeer::USER_ID, $this->id);
+
+				$this->collTimetracks = TimetrackPeer::doSelectJoinTicketMilestone($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(TimetrackPeer::USER_ID, $this->id);
+
+			if (!isset($this->lastTimetrackCriteria) || !$this->lastTimetrackCriteria->equals($criteria)) {
+				$this->collTimetracks = TimetrackPeer::doSelectJoinTicketMilestone($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastTimetrackCriteria = $criteria;
+
+		return $this->collTimetracks;
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser is new, it will return
+	 * an empty collection; or if this sfGuardUser has previously
+	 * been saved, it will retrieve related Timetracks from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardUser.
+	 */
+	public function getTimetracksJoinTicket($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collTimetracks === null) {
+			if ($this->isNew()) {
+				$this->collTimetracks = array();
+			} else {
+
+				$criteria->add(TimetrackPeer::USER_ID, $this->id);
+
+				$this->collTimetracks = TimetrackPeer::doSelectJoinTicket($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(TimetrackPeer::USER_ID, $this->id);
+
+			if (!isset($this->lastTimetrackCriteria) || !$this->lastTimetrackCriteria->equals($criteria)) {
+				$this->collTimetracks = TimetrackPeer::doSelectJoinTicket($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastTimetrackCriteria = $criteria;
+
+		return $this->collTimetracks;
+	}
+
+	/**
+	 * Clears out the collFilterHistorys collection (array).
+	 *
+	 * This does not modify the database; however, it will remove any associated objects, causing
+	 * them to be refetched by subsequent calls to accessor method.
+	 *
+	 * @return     void
+	 * @see        addFilterHistorys()
+	 */
+	public function clearFilterHistorys()
+	{
+		$this->collFilterHistorys = null; // important to set this to NULL since that means it is uninitialized
+	}
+
+	/**
+	 * Initializes the collFilterHistorys collection (array).
+	 *
+	 * By default this just sets the collFilterHistorys collection to an empty array (like clearcollFilterHistorys());
+	 * however, you may wish to override this method in your stub class to provide setting appropriate
+	 * to your application -- for example, setting the initial array to the values stored in database.
+	 *
+	 * @return     void
+	 */
+	public function initFilterHistorys()
+	{
+		$this->collFilterHistorys = array();
+	}
+
+	/**
+	 * Gets an array of FilterHistory objects which contain a foreign key that references this object.
+	 *
+	 * If this collection has already been initialized with an identical Criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser has previously been saved, it will retrieve
+	 * related FilterHistorys from storage. If this sfGuardUser is new, it will return
+	 * an empty collection or the current collection, the criteria is ignored on a new object.
+	 *
+	 * @param      PropelPDO $con
+	 * @param      Criteria $criteria
+	 * @return     array FilterHistory[]
+	 * @throws     PropelException
+	 */
+	public function getFilterHistorys($criteria = null, PropelPDO $con = null)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collFilterHistorys === null) {
+			if ($this->isNew()) {
+			   $this->collFilterHistorys = array();
+			} else {
+
+				$criteria->add(FilterHistoryPeer::USER_ID, $this->id);
+
+				FilterHistoryPeer::addSelectColumns($criteria);
+				$this->collFilterHistorys = FilterHistoryPeer::doSelect($criteria, $con);
+			}
+		} else {
+			// criteria has no effect for a new object
+			if (!$this->isNew()) {
+				// the following code is to determine if a new query is
+				// called for.  If the criteria is the same as the last
+				// one, just return the collection.
+
+
+				$criteria->add(FilterHistoryPeer::USER_ID, $this->id);
+
+				FilterHistoryPeer::addSelectColumns($criteria);
+				if (!isset($this->lastFilterHistoryCriteria) || !$this->lastFilterHistoryCriteria->equals($criteria)) {
+					$this->collFilterHistorys = FilterHistoryPeer::doSelect($criteria, $con);
+				}
+			}
+		}
+		$this->lastFilterHistoryCriteria = $criteria;
+		return $this->collFilterHistorys;
+	}
+
+	/**
+	 * Returns the number of related FilterHistory objects.
+	 *
+	 * @param      Criteria $criteria
+	 * @param      boolean $distinct
+	 * @param      PropelPDO $con
+	 * @return     int Count of related FilterHistory objects.
+	 * @throws     PropelException
+	 */
+	public function countFilterHistorys(Criteria $criteria = null, $distinct = false, PropelPDO $con = null)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		} else {
+			$criteria = clone $criteria;
+		}
+
+		if ($distinct) {
+			$criteria->setDistinct();
+		}
+
+		$count = null;
+
+		if ($this->collFilterHistorys === null) {
+			if ($this->isNew()) {
+				$count = 0;
+			} else {
+
+				$criteria->add(FilterHistoryPeer::USER_ID, $this->id);
+
+				$count = FilterHistoryPeer::doCount($criteria, false, $con);
+			}
+		} else {
+			// criteria has no effect for a new object
+			if (!$this->isNew()) {
+				// the following code is to determine if a new query is
+				// called for.  If the criteria is the same as the last
+				// one, just return count of the collection.
+
+
+				$criteria->add(FilterHistoryPeer::USER_ID, $this->id);
+
+				if (!isset($this->lastFilterHistoryCriteria) || !$this->lastFilterHistoryCriteria->equals($criteria)) {
+					$count = FilterHistoryPeer::doCount($criteria, false, $con);
+				} else {
+					$count = count($this->collFilterHistorys);
+				}
+			} else {
+				$count = count($this->collFilterHistorys);
+			}
+		}
+		return $count;
+	}
+
+	/**
+	 * Method called to associate a FilterHistory object to this object
+	 * through the FilterHistory foreign key attribute.
+	 *
+	 * @param      FilterHistory $l FilterHistory
+	 * @return     void
+	 * @throws     PropelException
+	 */
+	public function addFilterHistory(FilterHistory $l)
+	{
+		if ($this->collFilterHistorys === null) {
+			$this->initFilterHistorys();
+		}
+		if (!in_array($l, $this->collFilterHistorys, true)) { // only add it if the **same** object is not already associated
+			array_push($this->collFilterHistorys, $l);
+			$l->setsfGuardUser($this);
+		}
+	}
+
+	/**
+	 * Clears out the collProjectPermissions collection (array).
+	 *
+	 * This does not modify the database; however, it will remove any associated objects, causing
+	 * them to be refetched by subsequent calls to accessor method.
+	 *
+	 * @return     void
+	 * @see        addProjectPermissions()
+	 */
+	public function clearProjectPermissions()
+	{
+		$this->collProjectPermissions = null; // important to set this to NULL since that means it is uninitialized
+	}
+
+	/**
+	 * Initializes the collProjectPermissions collection (array).
+	 *
+	 * By default this just sets the collProjectPermissions collection to an empty array (like clearcollProjectPermissions());
+	 * however, you may wish to override this method in your stub class to provide setting appropriate
+	 * to your application -- for example, setting the initial array to the values stored in database.
+	 *
+	 * @return     void
+	 */
+	public function initProjectPermissions()
+	{
+		$this->collProjectPermissions = array();
+	}
+
+	/**
+	 * Gets an array of ProjectPermission objects which contain a foreign key that references this object.
+	 *
+	 * If this collection has already been initialized with an identical Criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser has previously been saved, it will retrieve
+	 * related ProjectPermissions from storage. If this sfGuardUser is new, it will return
+	 * an empty collection or the current collection, the criteria is ignored on a new object.
+	 *
+	 * @param      PropelPDO $con
+	 * @param      Criteria $criteria
+	 * @return     array ProjectPermission[]
+	 * @throws     PropelException
+	 */
+	public function getProjectPermissions($criteria = null, PropelPDO $con = null)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collProjectPermissions === null) {
+			if ($this->isNew()) {
+			   $this->collProjectPermissions = array();
+			} else {
+
+				$criteria->add(ProjectPermissionPeer::USER_ID, $this->id);
+
+				ProjectPermissionPeer::addSelectColumns($criteria);
+				$this->collProjectPermissions = ProjectPermissionPeer::doSelect($criteria, $con);
+			}
+		} else {
+			// criteria has no effect for a new object
+			if (!$this->isNew()) {
+				// the following code is to determine if a new query is
+				// called for.  If the criteria is the same as the last
+				// one, just return the collection.
+
+
+				$criteria->add(ProjectPermissionPeer::USER_ID, $this->id);
+
+				ProjectPermissionPeer::addSelectColumns($criteria);
+				if (!isset($this->lastProjectPermissionCriteria) || !$this->lastProjectPermissionCriteria->equals($criteria)) {
+					$this->collProjectPermissions = ProjectPermissionPeer::doSelect($criteria, $con);
+				}
+			}
+		}
+		$this->lastProjectPermissionCriteria = $criteria;
+		return $this->collProjectPermissions;
+	}
+
+	/**
+	 * Returns the number of related ProjectPermission objects.
+	 *
+	 * @param      Criteria $criteria
+	 * @param      boolean $distinct
+	 * @param      PropelPDO $con
+	 * @return     int Count of related ProjectPermission objects.
+	 * @throws     PropelException
+	 */
+	public function countProjectPermissions(Criteria $criteria = null, $distinct = false, PropelPDO $con = null)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		} else {
+			$criteria = clone $criteria;
+		}
+
+		if ($distinct) {
+			$criteria->setDistinct();
+		}
+
+		$count = null;
+
+		if ($this->collProjectPermissions === null) {
+			if ($this->isNew()) {
+				$count = 0;
+			} else {
+
+				$criteria->add(ProjectPermissionPeer::USER_ID, $this->id);
+
+				$count = ProjectPermissionPeer::doCount($criteria, false, $con);
+			}
+		} else {
+			// criteria has no effect for a new object
+			if (!$this->isNew()) {
+				// the following code is to determine if a new query is
+				// called for.  If the criteria is the same as the last
+				// one, just return count of the collection.
+
+
+				$criteria->add(ProjectPermissionPeer::USER_ID, $this->id);
+
+				if (!isset($this->lastProjectPermissionCriteria) || !$this->lastProjectPermissionCriteria->equals($criteria)) {
+					$count = ProjectPermissionPeer::doCount($criteria, false, $con);
+				} else {
+					$count = count($this->collProjectPermissions);
+				}
+			} else {
+				$count = count($this->collProjectPermissions);
+			}
+		}
+		return $count;
+	}
+
+	/**
+	 * Method called to associate a ProjectPermission object to this object
+	 * through the ProjectPermission foreign key attribute.
+	 *
+	 * @param      ProjectPermission $l ProjectPermission
+	 * @return     void
+	 * @throws     PropelException
+	 */
+	public function addProjectPermission(ProjectPermission $l)
+	{
+		if ($this->collProjectPermissions === null) {
+			$this->initProjectPermissions();
+		}
+		if (!in_array($l, $this->collProjectPermissions, true)) { // only add it if the **same** object is not already associated
+			array_push($this->collProjectPermissions, $l);
+			$l->setsfGuardUser($this);
+		}
+	}
+
+
+	/**
+	 * If this collection has already been initialized with
+	 * an identical criteria, it returns the collection.
+	 * Otherwise if this sfGuardUser is new, it will return
+	 * an empty collection; or if this sfGuardUser has previously
+	 * been saved, it will retrieve related ProjectPermissions from storage.
+	 *
+	 * This method is protected by default in order to keep the public
+	 * api reasonable.  You can provide public methods for those you
+	 * actually need in sfGuardUser.
+	 */
+	public function getProjectPermissionsJoinProject($criteria = null, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	{
+		if ($criteria === null) {
+			$criteria = new Criteria(sfGuardUserPeer::DATABASE_NAME);
+		}
+		elseif ($criteria instanceof Criteria)
+		{
+			$criteria = clone $criteria;
+		}
+
+		if ($this->collProjectPermissions === null) {
+			if ($this->isNew()) {
+				$this->collProjectPermissions = array();
+			} else {
+
+				$criteria->add(ProjectPermissionPeer::USER_ID, $this->id);
+
+				$this->collProjectPermissions = ProjectPermissionPeer::doSelectJoinProject($criteria, $con, $join_behavior);
+			}
+		} else {
+			// the following code is to determine if a new query is
+			// called for.  If the criteria is the same as the last
+			// one, just return the collection.
+
+			$criteria->add(ProjectPermissionPeer::USER_ID, $this->id);
+
+			if (!isset($this->lastProjectPermissionCriteria) || !$this->lastProjectPermissionCriteria->equals($criteria)) {
+				$this->collProjectPermissions = ProjectPermissionPeer::doSelectJoinProject($criteria, $con, $join_behavior);
+			}
+		}
+		$this->lastProjectPermissionCriteria = $criteria;
+
+		return $this->collProjectPermissions;
 	}
 
 	/**
@@ -2433,7 +4909,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 
 				$criteria->add(afPortalStatePeer::USER_ID, $this->id);
 
-				$count = afPortalStatePeer::doCount($criteria, $con);
+				$count = afPortalStatePeer::doCount($criteria, false, $con);
 			}
 		} else {
 			// criteria has no effect for a new object
@@ -2446,7 +4922,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 				$criteria->add(afPortalStatePeer::USER_ID, $this->id);
 
 				if (!isset($this->lastafPortalStateCriteria) || !$this->lastafPortalStateCriteria->equals($criteria)) {
-					$count = afPortalStatePeer::doCount($criteria, $con);
+					$count = afPortalStatePeer::doCount($criteria, false, $con);
 				} else {
 					$count = count($this->collafPortalStates);
 				}
@@ -2587,7 +5063,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 
 				$criteria->add(afWidgetSettingPeer::USER, $this->id);
 
-				$count = afWidgetSettingPeer::doCount($criteria, $con);
+				$count = afWidgetSettingPeer::doCount($criteria, false, $con);
 			}
 		} else {
 			// criteria has no effect for a new object
@@ -2600,7 +5076,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 				$criteria->add(afWidgetSettingPeer::USER, $this->id);
 
 				if (!isset($this->lastafWidgetSettingCriteria) || !$this->lastafWidgetSettingCriteria->equals($criteria)) {
-					$count = afWidgetSettingPeer::doCount($criteria, $con);
+					$count = afWidgetSettingPeer::doCount($criteria, false, $con);
 				} else {
 					$count = count($this->collafWidgetSettings);
 				}
@@ -2741,7 +5217,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 
 				$criteria->add(afSaveFilterPeer::USER, $this->id);
 
-				$count = afSaveFilterPeer::doCount($criteria, $con);
+				$count = afSaveFilterPeer::doCount($criteria, false, $con);
 			}
 		} else {
 			// criteria has no effect for a new object
@@ -2754,7 +5230,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 				$criteria->add(afSaveFilterPeer::USER, $this->id);
 
 				if (!isset($this->lastafSaveFilterCriteria) || !$this->lastafSaveFilterCriteria->equals($criteria)) {
-					$count = afSaveFilterPeer::doCount($criteria, $con);
+					$count = afSaveFilterPeer::doCount($criteria, false, $con);
 				} else {
 					$count = count($this->collafSaveFilters);
 				}
@@ -2895,7 +5371,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 
 				$criteria->add(afNotificationPeer::CREATED_BY, $this->id);
 
-				$count = afNotificationPeer::doCount($criteria, $con);
+				$count = afNotificationPeer::doCount($criteria, false, $con);
 			}
 		} else {
 			// criteria has no effect for a new object
@@ -2908,7 +5384,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 				$criteria->add(afNotificationPeer::CREATED_BY, $this->id);
 
 				if (!isset($this->lastafNotificationRelatedByCreatedByCriteria) || !$this->lastafNotificationRelatedByCreatedByCriteria->equals($criteria)) {
-					$count = afNotificationPeer::doCount($criteria, $con);
+					$count = afNotificationPeer::doCount($criteria, false, $con);
 				} else {
 					$count = count($this->collafNotificationsRelatedByCreatedBy);
 				}
@@ -3049,7 +5525,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 
 				$criteria->add(afNotificationPeer::CREATED_FOR, $this->id);
 
-				$count = afNotificationPeer::doCount($criteria, $con);
+				$count = afNotificationPeer::doCount($criteria, false, $con);
 			}
 		} else {
 			// criteria has no effect for a new object
@@ -3062,7 +5538,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 				$criteria->add(afNotificationPeer::CREATED_FOR, $this->id);
 
 				if (!isset($this->lastafNotificationRelatedByCreatedForCriteria) || !$this->lastafNotificationRelatedByCreatedForCriteria->equals($criteria)) {
-					$count = afNotificationPeer::doCount($criteria, $con);
+					$count = afNotificationPeer::doCount($criteria, false, $con);
 				} else {
 					$count = count($this->collafNotificationsRelatedByCreatedFor);
 				}
@@ -3203,7 +5679,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 
 				$criteria->add(afNotifiedForPeer::USER, $this->id);
 
-				$count = afNotifiedForPeer::doCount($criteria, $con);
+				$count = afNotifiedForPeer::doCount($criteria, false, $con);
 			}
 		} else {
 			// criteria has no effect for a new object
@@ -3216,7 +5692,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 				$criteria->add(afNotifiedForPeer::USER, $this->id);
 
 				if (!isset($this->lastafNotifiedForCriteria) || !$this->lastafNotifiedForCriteria->equals($criteria)) {
-					$count = afNotifiedForPeer::doCount($criteria, $con);
+					$count = afNotifiedForPeer::doCount($criteria, false, $con);
 				} else {
 					$count = count($this->collafNotifiedFors);
 				}
@@ -3404,7 +5880,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 
 				$criteria->add(afWidgetHelpSettingsPeer::USER_ID, $this->id);
 
-				$count = afWidgetHelpSettingsPeer::doCount($criteria, $con);
+				$count = afWidgetHelpSettingsPeer::doCount($criteria, false, $con);
 			}
 		} else {
 			// criteria has no effect for a new object
@@ -3417,7 +5893,7 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 				$criteria->add(afWidgetHelpSettingsPeer::USER_ID, $this->id);
 
 				if (!isset($this->lastafWidgetHelpSettingsCriteria) || !$this->lastafWidgetHelpSettingsCriteria->equals($criteria)) {
-					$count = afWidgetHelpSettingsPeer::doCount($criteria, $con);
+					$count = afWidgetHelpSettingsPeer::doCount($criteria, false, $con);
 				} else {
 					$count = count($this->collafWidgetHelpSettingss);
 				}
@@ -3474,11 +5950,51 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 					$o->clearAllReferences($deep);
 				}
 			}
+			if ($this->collComponents) {
+				foreach ((array) $this->collComponents as $o) {
+					$o->clearAllReferences($deep);
+				}
+			}
 			if ($this->singlesfGuardUserProfile) {
 				$this->singlesfGuardUserProfile->clearAllReferences($deep);
 			}
+			if ($this->collTicketsRelatedByUserId) {
+				foreach ((array) $this->collTicketsRelatedByUserId as $o) {
+					$o->clearAllReferences($deep);
+				}
+			}
+			if ($this->collTicketsRelatedByOwnerId) {
+				foreach ((array) $this->collTicketsRelatedByOwnerId as $o) {
+					$o->clearAllReferences($deep);
+				}
+			}
+			if ($this->collTicketComments) {
+				foreach ((array) $this->collTicketComments as $o) {
+					$o->clearAllReferences($deep);
+				}
+			}
 			if ($this->collChangelogs) {
 				foreach ((array) $this->collChangelogs as $o) {
+					$o->clearAllReferences($deep);
+				}
+			}
+			if ($this->collProjectUsers) {
+				foreach ((array) $this->collProjectUsers as $o) {
+					$o->clearAllReferences($deep);
+				}
+			}
+			if ($this->collTimetracks) {
+				foreach ((array) $this->collTimetracks as $o) {
+					$o->clearAllReferences($deep);
+				}
+			}
+			if ($this->collFilterHistorys) {
+				foreach ((array) $this->collFilterHistorys as $o) {
+					$o->clearAllReferences($deep);
+				}
+			}
+			if ($this->collProjectPermissions) {
+				foreach ((array) $this->collProjectPermissions as $o) {
 					$o->clearAllReferences($deep);
 				}
 			}
@@ -3522,8 +6038,16 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 		$this->collsfGuardUserPermissions = null;
 		$this->collsfGuardUserGroups = null;
 		$this->collsfGuardRememberKeys = null;
+		$this->collComponents = null;
 		$this->singlesfGuardUserProfile = null;
+		$this->collTicketsRelatedByUserId = null;
+		$this->collTicketsRelatedByOwnerId = null;
+		$this->collTicketComments = null;
 		$this->collChangelogs = null;
+		$this->collProjectUsers = null;
+		$this->collTimetracks = null;
+		$this->collFilterHistorys = null;
+		$this->collProjectPermissions = null;
 		$this->collafPortalStates = null;
 		$this->collafWidgetSettings = null;
 		$this->collafSaveFilters = null;
@@ -3533,18 +6057,21 @@ abstract class BasesfGuardUser extends BaseObject  implements Persistent {
 		$this->collafWidgetHelpSettingss = null;
 	}
 
-
-  public function __call($method, $arguments)
-  {
-    if (!$callable = sfMixer::getCallable('BasesfGuardUser:'.$method))
-    {
-      throw new sfException(sprintf('Call to undefined method BasesfGuardUser::%s', $method));
-    }
-
-    array_unshift($arguments, $this);
-
-    return call_user_func_array($callable, $arguments);
-  }
-
+	// symfony_behaviors behavior
+	
+	/**
+	 * Calls methods defined via {@link sfMixer}.
+	 */
+	public function __call($method, $arguments)
+	{
+	  if (!$callable = sfMixer::getCallable('BasesfGuardUser:'.$method))
+	  {
+	    throw new sfException(sprintf('Call to undefined method BasesfGuardUser::%s', $method));
+	  }
+	
+	  array_unshift($arguments, $this);
+	
+	  return call_user_func_array($callable, $arguments);
+	}
 
 } // BasesfGuardUser

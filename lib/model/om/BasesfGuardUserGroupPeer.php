@@ -15,9 +15,15 @@ abstract class BasesfGuardUserGroupPeer {
 	/** the table name for this class */
 	const TABLE_NAME = 'sf_guard_user_group';
 
+	/** the related Propel class for this table */
+	const OM_CLASS = 'sfGuardUserGroup';
+
 	/** A class that can be returned by this peer. */
 	const CLASS_DEFAULT = 'plugins.sfGuardPlugin.lib.model.sfGuardUserGroup';
 
+	/** the related TableMap class for this table */
+	const TM_CLASS = 'sfGuardUserGroupTableMap';
+	
 	/** The total number of columns. */
 	const NUM_COLUMNS = 2;
 
@@ -38,11 +44,13 @@ abstract class BasesfGuardUserGroupPeer {
 	 */
 	public static $instances = array();
 
+
+	// symfony behavior
+	
 	/**
-	 * The MapBuilder instance for this peer.
-	 * @var        MapBuilder
+	 * Indicates whether the current model includes I18N.
 	 */
-	private static $mapBuilder = null;
+	const IS_I18N = false;
 
 	/**
 	 * holds an array of fieldnames
@@ -72,17 +80,6 @@ abstract class BasesfGuardUserGroupPeer {
 		BasePeer::TYPE_NUM => array (0, 1, )
 	);
 
-	/**
-	 * Get a (singleton) instance of the MapBuilder for this peer class.
-	 * @return     MapBuilder The map builder for this peer
-	 */
-	public static function getMapBuilder()
-	{
-		if (self::$mapBuilder === null) {
-			self::$mapBuilder = new sfGuardUserGroupMapBuilder();
-		}
-		return self::$mapBuilder;
-	}
 	/**
 	 * Translates a fieldname to another type
 	 *
@@ -150,11 +147,8 @@ abstract class BasesfGuardUserGroupPeer {
 	 */
 	public static function addSelectColumns(Criteria $criteria)
 	{
-
 		$criteria->addSelectColumn(sfGuardUserGroupPeer::USER_ID);
-
 		$criteria->addSelectColumn(sfGuardUserGroupPeer::GROUP_ID);
-
 	}
 
 	/**
@@ -189,13 +183,11 @@ abstract class BasesfGuardUserGroupPeer {
 		if ($con === null) {
 			$con = Propel::getConnection(sfGuardUserGroupPeer::DATABASE_NAME, Propel::CONNECTION_READ);
 		}
-
-
-    foreach (sfMixer::getCallables('BasesfGuardUserGroupPeer:doCount:doCount') as $callable)
-    {
-      call_user_func($callable, 'BasesfGuardUserGroupPeer', $criteria, $con);
-    }
-
+		// symfony_behaviors behavior
+		foreach (sfMixer::getCallables(self::getMixerPreSelectHook(__FUNCTION__)) as $sf_hook)
+		{
+		  call_user_func($sf_hook, 'BasesfGuardUserGroupPeer', $criteria, $con);
+		}
 
 		// BasePeer returns a PDOStatement
 		$stmt = BasePeer::doCount($criteria, $con);
@@ -255,13 +247,6 @@ abstract class BasesfGuardUserGroupPeer {
 	 */
 	public static function doSelectStmt(Criteria $criteria, PropelPDO $con = null)
 	{
-
-    foreach (sfMixer::getCallables('BasesfGuardUserGroupPeer:doSelectStmt:doSelectStmt') as $callable)
-    {
-      call_user_func($callable, 'BasesfGuardUserGroupPeer', $criteria, $con);
-    }
-
-
 		if ($con === null) {
 			$con = Propel::getConnection(sfGuardUserGroupPeer::DATABASE_NAME, Propel::CONNECTION_READ);
 		}
@@ -273,6 +258,12 @@ abstract class BasesfGuardUserGroupPeer {
 
 		// Set the correct dbName
 		$criteria->setDbName(self::DATABASE_NAME);
+		// symfony_behaviors behavior
+		foreach (sfMixer::getCallables(self::getMixerPreSelectHook(__FUNCTION__)) as $sf_hook)
+		{
+		  call_user_func($sf_hook, 'BasesfGuardUserGroupPeer', $criteria, $con);
+		}
+
 
 		// BasePeer returns a PDOStatement
 		return BasePeer::doSelect($criteria, $con);
@@ -357,6 +348,14 @@ abstract class BasesfGuardUserGroupPeer {
 	}
 	
 	/**
+	 * Method to invalidate the instance pool of all tables related to sf_guard_user_group
+	 * by a foreign key with ON DELETE CASCADE
+	 */
+	public static function clearRelatedInstancePool()
+	{
+	}
+
+	/**
 	 * Retrieves a string version of the primary key from the DB resultset row that can be used to uniquely identify a row in this table.
 	 *
 	 * For tables with a single-column primary key, that simple pkey value will be returned.  For tables with
@@ -369,10 +368,10 @@ abstract class BasesfGuardUserGroupPeer {
 	public static function getPrimaryKeyHashFromRow($row, $startcol = 0)
 	{
 		// If the PK cannot be derived from the row, return NULL.
-		if ($row[$startcol + 0] === null && $row[$startcol + 1] === null) {
+		if ($row[$startcol] === null && $row[$startcol + 1] === null) {
 			return null;
 		}
-		return serialize(array((string) $row[$startcol + 0], (string) $row[$startcol + 1]));
+		return serialize(array((string) $row[$startcol], (string) $row[$startcol + 1]));
 	}
 
 	/**
@@ -387,8 +386,7 @@ abstract class BasesfGuardUserGroupPeer {
 		$results = array();
 	
 		// set the class once to avoid overhead in the loop
-		$cls = sfGuardUserGroupPeer::getOMClass();
-		$cls = substr('.'.$cls, strrpos('.'.$cls, '.') + 1);
+		$cls = sfGuardUserGroupPeer::getOMClass(false);
 		// populate the object(s)
 		while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
 			$key = sfGuardUserGroupPeer::getPrimaryKeyHashFromRow($row, 0);
@@ -398,7 +396,6 @@ abstract class BasesfGuardUserGroupPeer {
 				// $obj->hydrate($row, 0, true); // rehydrate
 				$results[] = $obj;
 			} else {
-		
 				$obj = new $cls();
 				$obj->hydrate($row);
 				$results[] = $obj;
@@ -412,7 +409,7 @@ abstract class BasesfGuardUserGroupPeer {
 	/**
 	 * Returns the number of rows matching criteria, joining the related sfGuardUser table
 	 *
-	 * @param      Criteria $c
+	 * @param      Criteria $criteria
 	 * @param      boolean $distinct Whether to select only distinct columns; deprecated: use Criteria->setDistinct() instead.
 	 * @param      PropelPDO $con
 	 * @param      String    $join_behavior the type of joins to use, defaults to Criteria::LEFT_JOIN
@@ -435,9 +432,9 @@ abstract class BasesfGuardUserGroupPeer {
 		if (!$criteria->hasSelectClause()) {
 			sfGuardUserGroupPeer::addSelectColumns($criteria);
 		}
-
+		
 		$criteria->clearOrderByColumns(); // ORDER BY won't ever affect the count
-
+		
 		// Set the correct dbName
 		$criteria->setDbName(self::DATABASE_NAME);
 
@@ -445,14 +442,13 @@ abstract class BasesfGuardUserGroupPeer {
 			$con = Propel::getConnection(sfGuardUserGroupPeer::DATABASE_NAME, Propel::CONNECTION_READ);
 		}
 
-		$criteria->addJoin(array(sfGuardUserGroupPeer::USER_ID,), array(sfGuardUserPeer::ID,), $join_behavior);
+		$criteria->addJoin(sfGuardUserGroupPeer::USER_ID, sfGuardUserPeer::ID, $join_behavior);
 
-
-    foreach (sfMixer::getCallables('BasesfGuardUserGroupPeer:doCount:doCount') as $callable)
-    {
-      call_user_func($callable, 'BasesfGuardUserGroupPeer', $criteria, $con);
-    }
-
+		// symfony_behaviors behavior
+		foreach (sfMixer::getCallables(self::getMixerPreSelectHook(__FUNCTION__)) as $sf_hook)
+		{
+		  call_user_func($sf_hook, 'BasesfGuardUserGroupPeer', $criteria, $con);
+		}
 
 		$stmt = BasePeer::doCount($criteria, $con);
 
@@ -469,7 +465,7 @@ abstract class BasesfGuardUserGroupPeer {
 	/**
 	 * Returns the number of rows matching criteria, joining the related sfGuardGroup table
 	 *
-	 * @param      Criteria $c
+	 * @param      Criteria $criteria
 	 * @param      boolean $distinct Whether to select only distinct columns; deprecated: use Criteria->setDistinct() instead.
 	 * @param      PropelPDO $con
 	 * @param      String    $join_behavior the type of joins to use, defaults to Criteria::LEFT_JOIN
@@ -492,9 +488,9 @@ abstract class BasesfGuardUserGroupPeer {
 		if (!$criteria->hasSelectClause()) {
 			sfGuardUserGroupPeer::addSelectColumns($criteria);
 		}
-
+		
 		$criteria->clearOrderByColumns(); // ORDER BY won't ever affect the count
-
+		
 		// Set the correct dbName
 		$criteria->setDbName(self::DATABASE_NAME);
 
@@ -502,14 +498,13 @@ abstract class BasesfGuardUserGroupPeer {
 			$con = Propel::getConnection(sfGuardUserGroupPeer::DATABASE_NAME, Propel::CONNECTION_READ);
 		}
 
-		$criteria->addJoin(array(sfGuardUserGroupPeer::GROUP_ID,), array(sfGuardGroupPeer::ID,), $join_behavior);
+		$criteria->addJoin(sfGuardUserGroupPeer::GROUP_ID, sfGuardGroupPeer::ID, $join_behavior);
 
-
-    foreach (sfMixer::getCallables('BasesfGuardUserGroupPeer:doCount:doCount') as $callable)
-    {
-      call_user_func($callable, 'BasesfGuardUserGroupPeer', $criteria, $con);
-    }
-
+		// symfony_behaviors behavior
+		foreach (sfMixer::getCallables(self::getMixerPreSelectHook(__FUNCTION__)) as $sf_hook)
+		{
+		  call_user_func($sf_hook, 'BasesfGuardUserGroupPeer', $criteria, $con);
+		}
 
 		$stmt = BasePeer::doCount($criteria, $con);
 
@@ -525,35 +520,35 @@ abstract class BasesfGuardUserGroupPeer {
 
 	/**
 	 * Selects a collection of sfGuardUserGroup objects pre-filled with their sfGuardUser objects.
-	 * @param      Criteria  $c
+	 * @param      Criteria  $criteria
 	 * @param      PropelPDO $con
 	 * @param      String    $join_behavior the type of joins to use, defaults to Criteria::LEFT_JOIN
 	 * @return     array Array of sfGuardUserGroup objects.
 	 * @throws     PropelException Any exceptions caught during processing will be
 	 *		 rethrown wrapped into a PropelException.
 	 */
-	public static function doSelectJoinsfGuardUser(Criteria $c, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	public static function doSelectJoinsfGuardUser(Criteria $criteria, $con = null, $join_behavior = Criteria::LEFT_JOIN)
 	{
-
-    foreach (sfMixer::getCallables('BasesfGuardUserGroupPeer:doSelectJoin:doSelectJoin') as $callable)
-    {
-      call_user_func($callable, 'BasesfGuardUserGroupPeer', $c, $con);
-    }
-
-
-		$c = clone $c;
+		$criteria = clone $criteria;
 
 		// Set the correct dbName if it has not been overridden
-		if ($c->getDbName() == Propel::getDefaultDB()) {
-			$c->setDbName(self::DATABASE_NAME);
+		if ($criteria->getDbName() == Propel::getDefaultDB()) {
+			$criteria->setDbName(self::DATABASE_NAME);
 		}
 
-		sfGuardUserGroupPeer::addSelectColumns($c);
+		sfGuardUserGroupPeer::addSelectColumns($criteria);
 		$startcol = (sfGuardUserGroupPeer::NUM_COLUMNS - sfGuardUserGroupPeer::NUM_LAZY_LOAD_COLUMNS);
-		sfGuardUserPeer::addSelectColumns($c);
+		sfGuardUserPeer::addSelectColumns($criteria);
 
-		$c->addJoin(array(sfGuardUserGroupPeer::USER_ID,), array(sfGuardUserPeer::ID,), $join_behavior);
-		$stmt = BasePeer::doSelect($c, $con);
+		$criteria->addJoin(sfGuardUserGroupPeer::USER_ID, sfGuardUserPeer::ID, $join_behavior);
+
+		// symfony_behaviors behavior
+		foreach (sfMixer::getCallables(self::getMixerPreSelectHook(__FUNCTION__)) as $sf_hook)
+		{
+		  call_user_func($sf_hook, 'BasesfGuardUserGroupPeer', $criteria, $con);
+		}
+
+		$stmt = BasePeer::doSelect($criteria, $con);
 		$results = array();
 
 		while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
@@ -564,9 +559,8 @@ abstract class BasesfGuardUserGroupPeer {
 				// $obj1->hydrate($row, 0, true); // rehydrate
 			} else {
 
-				$omClass = sfGuardUserGroupPeer::getOMClass();
+				$cls = sfGuardUserGroupPeer::getOMClass(false);
 
-				$cls = substr('.'.$omClass, strrpos('.'.$omClass, '.') + 1);
 				$obj1 = new $cls();
 				$obj1->hydrate($row);
 				sfGuardUserGroupPeer::addInstanceToPool($obj1, $key1);
@@ -577,14 +571,13 @@ abstract class BasesfGuardUserGroupPeer {
 				$obj2 = sfGuardUserPeer::getInstanceFromPool($key2);
 				if (!$obj2) {
 
-					$omClass = sfGuardUserPeer::getOMClass();
+					$cls = sfGuardUserPeer::getOMClass(false);
 
-					$cls = substr('.'.$omClass, strrpos('.'.$omClass, '.') + 1);
 					$obj2 = new $cls();
 					$obj2->hydrate($row, $startcol);
 					sfGuardUserPeer::addInstanceToPool($obj2, $key2);
 				} // if obj2 already loaded
-
+				
 				// Add the $obj1 (sfGuardUserGroup) to $obj2 (sfGuardUser)
 				$obj2->addsfGuardUserGroup($obj1);
 
@@ -599,28 +592,35 @@ abstract class BasesfGuardUserGroupPeer {
 
 	/**
 	 * Selects a collection of sfGuardUserGroup objects pre-filled with their sfGuardGroup objects.
-	 * @param      Criteria  $c
+	 * @param      Criteria  $criteria
 	 * @param      PropelPDO $con
 	 * @param      String    $join_behavior the type of joins to use, defaults to Criteria::LEFT_JOIN
 	 * @return     array Array of sfGuardUserGroup objects.
 	 * @throws     PropelException Any exceptions caught during processing will be
 	 *		 rethrown wrapped into a PropelException.
 	 */
-	public static function doSelectJoinsfGuardGroup(Criteria $c, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	public static function doSelectJoinsfGuardGroup(Criteria $criteria, $con = null, $join_behavior = Criteria::LEFT_JOIN)
 	{
-		$c = clone $c;
+		$criteria = clone $criteria;
 
 		// Set the correct dbName if it has not been overridden
-		if ($c->getDbName() == Propel::getDefaultDB()) {
-			$c->setDbName(self::DATABASE_NAME);
+		if ($criteria->getDbName() == Propel::getDefaultDB()) {
+			$criteria->setDbName(self::DATABASE_NAME);
 		}
 
-		sfGuardUserGroupPeer::addSelectColumns($c);
+		sfGuardUserGroupPeer::addSelectColumns($criteria);
 		$startcol = (sfGuardUserGroupPeer::NUM_COLUMNS - sfGuardUserGroupPeer::NUM_LAZY_LOAD_COLUMNS);
-		sfGuardGroupPeer::addSelectColumns($c);
+		sfGuardGroupPeer::addSelectColumns($criteria);
 
-		$c->addJoin(array(sfGuardUserGroupPeer::GROUP_ID,), array(sfGuardGroupPeer::ID,), $join_behavior);
-		$stmt = BasePeer::doSelect($c, $con);
+		$criteria->addJoin(sfGuardUserGroupPeer::GROUP_ID, sfGuardGroupPeer::ID, $join_behavior);
+
+		// symfony_behaviors behavior
+		foreach (sfMixer::getCallables(self::getMixerPreSelectHook(__FUNCTION__)) as $sf_hook)
+		{
+		  call_user_func($sf_hook, 'BasesfGuardUserGroupPeer', $criteria, $con);
+		}
+
+		$stmt = BasePeer::doSelect($criteria, $con);
 		$results = array();
 
 		while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
@@ -631,9 +631,8 @@ abstract class BasesfGuardUserGroupPeer {
 				// $obj1->hydrate($row, 0, true); // rehydrate
 			} else {
 
-				$omClass = sfGuardUserGroupPeer::getOMClass();
+				$cls = sfGuardUserGroupPeer::getOMClass(false);
 
-				$cls = substr('.'.$omClass, strrpos('.'.$omClass, '.') + 1);
 				$obj1 = new $cls();
 				$obj1->hydrate($row);
 				sfGuardUserGroupPeer::addInstanceToPool($obj1, $key1);
@@ -644,14 +643,13 @@ abstract class BasesfGuardUserGroupPeer {
 				$obj2 = sfGuardGroupPeer::getInstanceFromPool($key2);
 				if (!$obj2) {
 
-					$omClass = sfGuardGroupPeer::getOMClass();
+					$cls = sfGuardGroupPeer::getOMClass(false);
 
-					$cls = substr('.'.$omClass, strrpos('.'.$omClass, '.') + 1);
 					$obj2 = new $cls();
 					$obj2->hydrate($row, $startcol);
 					sfGuardGroupPeer::addInstanceToPool($obj2, $key2);
 				} // if obj2 already loaded
-
+				
 				// Add the $obj1 (sfGuardUserGroup) to $obj2 (sfGuardGroup)
 				$obj2->addsfGuardUserGroup($obj1);
 
@@ -667,7 +665,7 @@ abstract class BasesfGuardUserGroupPeer {
 	/**
 	 * Returns the number of rows matching criteria, joining all related tables
 	 *
-	 * @param      Criteria $c
+	 * @param      Criteria $criteria
 	 * @param      boolean $distinct Whether to select only distinct columns; deprecated: use Criteria->setDistinct() instead.
 	 * @param      PropelPDO $con
 	 * @param      String    $join_behavior the type of joins to use, defaults to Criteria::LEFT_JOIN
@@ -690,9 +688,9 @@ abstract class BasesfGuardUserGroupPeer {
 		if (!$criteria->hasSelectClause()) {
 			sfGuardUserGroupPeer::addSelectColumns($criteria);
 		}
-
+		
 		$criteria->clearOrderByColumns(); // ORDER BY won't ever affect the count
-
+		
 		// Set the correct dbName
 		$criteria->setDbName(self::DATABASE_NAME);
 
@@ -700,14 +698,15 @@ abstract class BasesfGuardUserGroupPeer {
 			$con = Propel::getConnection(sfGuardUserGroupPeer::DATABASE_NAME, Propel::CONNECTION_READ);
 		}
 
-		$criteria->addJoin(array(sfGuardUserGroupPeer::USER_ID,), array(sfGuardUserPeer::ID,), $join_behavior);
-		$criteria->addJoin(array(sfGuardUserGroupPeer::GROUP_ID,), array(sfGuardGroupPeer::ID,), $join_behavior);
+		$criteria->addJoin(sfGuardUserGroupPeer::USER_ID, sfGuardUserPeer::ID, $join_behavior);
 
-    foreach (sfMixer::getCallables('BasesfGuardUserGroupPeer:doCount:doCount') as $callable)
-    {
-      call_user_func($callable, 'BasesfGuardUserGroupPeer', $criteria, $con);
-    }
+		$criteria->addJoin(sfGuardUserGroupPeer::GROUP_ID, sfGuardGroupPeer::ID, $join_behavior);
 
+		// symfony_behaviors behavior
+		foreach (sfMixer::getCallables(self::getMixerPreSelectHook(__FUNCTION__)) as $sf_hook)
+		{
+		  call_user_func($sf_hook, 'BasesfGuardUserGroupPeer', $criteria, $con);
+		}
 
 		$stmt = BasePeer::doCount($criteria, $con);
 
@@ -723,41 +722,42 @@ abstract class BasesfGuardUserGroupPeer {
 	/**
 	 * Selects a collection of sfGuardUserGroup objects pre-filled with all related objects.
 	 *
-	 * @param      Criteria  $c
+	 * @param      Criteria  $criteria
 	 * @param      PropelPDO $con
 	 * @param      String    $join_behavior the type of joins to use, defaults to Criteria::LEFT_JOIN
 	 * @return     array Array of sfGuardUserGroup objects.
 	 * @throws     PropelException Any exceptions caught during processing will be
 	 *		 rethrown wrapped into a PropelException.
 	 */
-	public static function doSelectJoinAll(Criteria $c, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	public static function doSelectJoinAll(Criteria $criteria, $con = null, $join_behavior = Criteria::LEFT_JOIN)
 	{
-
-    foreach (sfMixer::getCallables('BasesfGuardUserGroupPeer:doSelectJoinAll:doSelectJoinAll') as $callable)
-    {
-      call_user_func($callable, 'BasesfGuardUserGroupPeer', $c, $con);
-    }
-
-
-		$c = clone $c;
+		$criteria = clone $criteria;
 
 		// Set the correct dbName if it has not been overridden
-		if ($c->getDbName() == Propel::getDefaultDB()) {
-			$c->setDbName(self::DATABASE_NAME);
+		if ($criteria->getDbName() == Propel::getDefaultDB()) {
+			$criteria->setDbName(self::DATABASE_NAME);
 		}
 
-		sfGuardUserGroupPeer::addSelectColumns($c);
+		sfGuardUserGroupPeer::addSelectColumns($criteria);
 		$startcol2 = (sfGuardUserGroupPeer::NUM_COLUMNS - sfGuardUserGroupPeer::NUM_LAZY_LOAD_COLUMNS);
 
-		sfGuardUserPeer::addSelectColumns($c);
+		sfGuardUserPeer::addSelectColumns($criteria);
 		$startcol3 = $startcol2 + (sfGuardUserPeer::NUM_COLUMNS - sfGuardUserPeer::NUM_LAZY_LOAD_COLUMNS);
 
-		sfGuardGroupPeer::addSelectColumns($c);
+		sfGuardGroupPeer::addSelectColumns($criteria);
 		$startcol4 = $startcol3 + (sfGuardGroupPeer::NUM_COLUMNS - sfGuardGroupPeer::NUM_LAZY_LOAD_COLUMNS);
 
-		$c->addJoin(array(sfGuardUserGroupPeer::USER_ID,), array(sfGuardUserPeer::ID,), $join_behavior);
-		$c->addJoin(array(sfGuardUserGroupPeer::GROUP_ID,), array(sfGuardGroupPeer::ID,), $join_behavior);
-		$stmt = BasePeer::doSelect($c, $con);
+		$criteria->addJoin(sfGuardUserGroupPeer::USER_ID, sfGuardUserPeer::ID, $join_behavior);
+
+		$criteria->addJoin(sfGuardUserGroupPeer::GROUP_ID, sfGuardGroupPeer::ID, $join_behavior);
+
+		// symfony_behaviors behavior
+		foreach (sfMixer::getCallables(self::getMixerPreSelectHook(__FUNCTION__)) as $sf_hook)
+		{
+		  call_user_func($sf_hook, 'BasesfGuardUserGroupPeer', $criteria, $con);
+		}
+
+		$stmt = BasePeer::doSelect($criteria, $con);
 		$results = array();
 
 		while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
@@ -767,9 +767,8 @@ abstract class BasesfGuardUserGroupPeer {
 				// See http://propel.phpdb.org/trac/ticket/509
 				// $obj1->hydrate($row, 0, true); // rehydrate
 			} else {
-				$omClass = sfGuardUserGroupPeer::getOMClass();
+				$cls = sfGuardUserGroupPeer::getOMClass(false);
 
-				$cls = substr('.'.$omClass, strrpos('.'.$omClass, '.') + 1);
 				$obj1 = new $cls();
 				$obj1->hydrate($row);
 				sfGuardUserGroupPeer::addInstanceToPool($obj1, $key1);
@@ -782,10 +781,8 @@ abstract class BasesfGuardUserGroupPeer {
 				$obj2 = sfGuardUserPeer::getInstanceFromPool($key2);
 				if (!$obj2) {
 
-					$omClass = sfGuardUserPeer::getOMClass();
+					$cls = sfGuardUserPeer::getOMClass(false);
 
-
-					$cls = substr('.'.$omClass, strrpos('.'.$omClass, '.') + 1);
 					$obj2 = new $cls();
 					$obj2->hydrate($row, $startcol2);
 					sfGuardUserPeer::addInstanceToPool($obj2, $key2);
@@ -802,10 +799,8 @@ abstract class BasesfGuardUserGroupPeer {
 				$obj3 = sfGuardGroupPeer::getInstanceFromPool($key3);
 				if (!$obj3) {
 
-					$omClass = sfGuardGroupPeer::getOMClass();
+					$cls = sfGuardGroupPeer::getOMClass(false);
 
-
-					$cls = substr('.'.$omClass, strrpos('.'.$omClass, '.') + 1);
 					$obj3 = new $cls();
 					$obj3->hydrate($row, $startcol3);
 					sfGuardGroupPeer::addInstanceToPool($obj3, $key3);
@@ -825,7 +820,7 @@ abstract class BasesfGuardUserGroupPeer {
 	/**
 	 * Returns the number of rows matching criteria, joining the related sfGuardUser table
 	 *
-	 * @param      Criteria $c
+	 * @param      Criteria $criteria
 	 * @param      boolean $distinct Whether to select only distinct columns; deprecated: use Criteria->setDistinct() instead.
 	 * @param      PropelPDO $con
 	 * @param      String    $join_behavior the type of joins to use, defaults to Criteria::LEFT_JOIN
@@ -836,6 +831,11 @@ abstract class BasesfGuardUserGroupPeer {
 		// we're going to modify criteria, so copy it first
 		$criteria = clone $criteria;
 
+		// We need to set the primary table name, since in the case that there are no WHERE columns
+		// it will be impossible for the BasePeer::createSelectSql() method to determine which
+		// tables go into the FROM clause.
+		$criteria->setPrimaryTableName(sfGuardUserGroupPeer::TABLE_NAME);
+		
 		if ($distinct && !in_array(Criteria::DISTINCT, $criteria->getSelectModifiers())) {
 			$criteria->setDistinct();
 		}
@@ -843,9 +843,9 @@ abstract class BasesfGuardUserGroupPeer {
 		if (!$criteria->hasSelectClause()) {
 			sfGuardUserGroupPeer::addSelectColumns($criteria);
 		}
-
-		$criteria->clearOrderByColumns(); // ORDER BY won't ever affect the count
-
+		
+		$criteria->clearOrderByColumns(); // ORDER BY should not affect count
+		
 		// Set the correct dbName
 		$criteria->setDbName(self::DATABASE_NAME);
 
@@ -853,13 +853,13 @@ abstract class BasesfGuardUserGroupPeer {
 			$con = Propel::getConnection(sfGuardUserGroupPeer::DATABASE_NAME, Propel::CONNECTION_READ);
 		}
 	
-				$criteria->addJoin(array(sfGuardUserGroupPeer::GROUP_ID,), array(sfGuardGroupPeer::ID,), $join_behavior);
+		$criteria->addJoin(sfGuardUserGroupPeer::GROUP_ID, sfGuardGroupPeer::ID, $join_behavior);
 
-    foreach (sfMixer::getCallables('BasesfGuardUserGroupPeer:doCount:doCount') as $callable)
-    {
-      call_user_func($callable, 'BasesfGuardUserGroupPeer', $criteria, $con);
-    }
-
+		// symfony_behaviors behavior
+		foreach (sfMixer::getCallables(self::getMixerPreSelectHook(__FUNCTION__)) as $sf_hook)
+		{
+		  call_user_func($sf_hook, 'BasesfGuardUserGroupPeer', $criteria, $con);
+		}
 
 		$stmt = BasePeer::doCount($criteria, $con);
 
@@ -876,7 +876,7 @@ abstract class BasesfGuardUserGroupPeer {
 	/**
 	 * Returns the number of rows matching criteria, joining the related sfGuardGroup table
 	 *
-	 * @param      Criteria $c
+	 * @param      Criteria $criteria
 	 * @param      boolean $distinct Whether to select only distinct columns; deprecated: use Criteria->setDistinct() instead.
 	 * @param      PropelPDO $con
 	 * @param      String    $join_behavior the type of joins to use, defaults to Criteria::LEFT_JOIN
@@ -887,6 +887,11 @@ abstract class BasesfGuardUserGroupPeer {
 		// we're going to modify criteria, so copy it first
 		$criteria = clone $criteria;
 
+		// We need to set the primary table name, since in the case that there are no WHERE columns
+		// it will be impossible for the BasePeer::createSelectSql() method to determine which
+		// tables go into the FROM clause.
+		$criteria->setPrimaryTableName(sfGuardUserGroupPeer::TABLE_NAME);
+		
 		if ($distinct && !in_array(Criteria::DISTINCT, $criteria->getSelectModifiers())) {
 			$criteria->setDistinct();
 		}
@@ -894,9 +899,9 @@ abstract class BasesfGuardUserGroupPeer {
 		if (!$criteria->hasSelectClause()) {
 			sfGuardUserGroupPeer::addSelectColumns($criteria);
 		}
-
-		$criteria->clearOrderByColumns(); // ORDER BY won't ever affect the count
-
+		
+		$criteria->clearOrderByColumns(); // ORDER BY should not affect count
+		
 		// Set the correct dbName
 		$criteria->setDbName(self::DATABASE_NAME);
 
@@ -904,13 +909,13 @@ abstract class BasesfGuardUserGroupPeer {
 			$con = Propel::getConnection(sfGuardUserGroupPeer::DATABASE_NAME, Propel::CONNECTION_READ);
 		}
 	
-				$criteria->addJoin(array(sfGuardUserGroupPeer::USER_ID,), array(sfGuardUserPeer::ID,), $join_behavior);
+		$criteria->addJoin(sfGuardUserGroupPeer::USER_ID, sfGuardUserPeer::ID, $join_behavior);
 
-    foreach (sfMixer::getCallables('BasesfGuardUserGroupPeer:doCount:doCount') as $callable)
-    {
-      call_user_func($callable, 'BasesfGuardUserGroupPeer', $criteria, $con);
-    }
-
+		// symfony_behaviors behavior
+		foreach (sfMixer::getCallables(self::getMixerPreSelectHook(__FUNCTION__)) as $sf_hook)
+		{
+		  call_user_func($sf_hook, 'BasesfGuardUserGroupPeer', $criteria, $con);
+		}
 
 		$stmt = BasePeer::doCount($criteria, $con);
 
@@ -927,40 +932,40 @@ abstract class BasesfGuardUserGroupPeer {
 	/**
 	 * Selects a collection of sfGuardUserGroup objects pre-filled with all related objects except sfGuardUser.
 	 *
-	 * @param      Criteria  $c
+	 * @param      Criteria  $criteria
 	 * @param      PropelPDO $con
 	 * @param      String    $join_behavior the type of joins to use, defaults to Criteria::LEFT_JOIN
 	 * @return     array Array of sfGuardUserGroup objects.
 	 * @throws     PropelException Any exceptions caught during processing will be
 	 *		 rethrown wrapped into a PropelException.
 	 */
-	public static function doSelectJoinAllExceptsfGuardUser(Criteria $c, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	public static function doSelectJoinAllExceptsfGuardUser(Criteria $criteria, $con = null, $join_behavior = Criteria::LEFT_JOIN)
 	{
-
-    foreach (sfMixer::getCallables('BasesfGuardUserGroupPeer:doSelectJoinAllExcept:doSelectJoinAllExcept') as $callable)
-    {
-      call_user_func($callable, 'BasesfGuardUserGroupPeer', $c, $con);
-    }
-
-
-		$c = clone $c;
+		$criteria = clone $criteria;
 
 		// Set the correct dbName if it has not been overridden
-		// $c->getDbName() will return the same object if not set to another value
+		// $criteria->getDbName() will return the same object if not set to another value
 		// so == check is okay and faster
-		if ($c->getDbName() == Propel::getDefaultDB()) {
-			$c->setDbName(self::DATABASE_NAME);
+		if ($criteria->getDbName() == Propel::getDefaultDB()) {
+			$criteria->setDbName(self::DATABASE_NAME);
 		}
 
-		sfGuardUserGroupPeer::addSelectColumns($c);
+		sfGuardUserGroupPeer::addSelectColumns($criteria);
 		$startcol2 = (sfGuardUserGroupPeer::NUM_COLUMNS - sfGuardUserGroupPeer::NUM_LAZY_LOAD_COLUMNS);
 
-		sfGuardGroupPeer::addSelectColumns($c);
+		sfGuardGroupPeer::addSelectColumns($criteria);
 		$startcol3 = $startcol2 + (sfGuardGroupPeer::NUM_COLUMNS - sfGuardGroupPeer::NUM_LAZY_LOAD_COLUMNS);
 
-				$c->addJoin(array(sfGuardUserGroupPeer::GROUP_ID,), array(sfGuardGroupPeer::ID,), $join_behavior);
+		$criteria->addJoin(sfGuardUserGroupPeer::GROUP_ID, sfGuardGroupPeer::ID, $join_behavior);
 
-		$stmt = BasePeer::doSelect($c, $con);
+		// symfony_behaviors behavior
+		foreach (sfMixer::getCallables(self::getMixerPreSelectHook(__FUNCTION__)) as $sf_hook)
+		{
+		  call_user_func($sf_hook, 'BasesfGuardUserGroupPeer', $criteria, $con);
+		}
+
+
+		$stmt = BasePeer::doSelect($criteria, $con);
 		$results = array();
 
 		while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
@@ -970,9 +975,8 @@ abstract class BasesfGuardUserGroupPeer {
 				// See http://propel.phpdb.org/trac/ticket/509
 				// $obj1->hydrate($row, 0, true); // rehydrate
 			} else {
-				$omClass = sfGuardUserGroupPeer::getOMClass();
+				$cls = sfGuardUserGroupPeer::getOMClass(false);
 
-				$cls = substr('.'.$omClass, strrpos('.'.$omClass, '.') + 1);
 				$obj1 = new $cls();
 				$obj1->hydrate($row);
 				sfGuardUserGroupPeer::addInstanceToPool($obj1, $key1);
@@ -985,10 +989,8 @@ abstract class BasesfGuardUserGroupPeer {
 					$obj2 = sfGuardGroupPeer::getInstanceFromPool($key2);
 					if (!$obj2) {
 	
-						$omClass = sfGuardGroupPeer::getOMClass();
+						$cls = sfGuardGroupPeer::getOMClass(false);
 
-
-					$cls = substr('.'.$omClass, strrpos('.'.$omClass, '.') + 1);
 					$obj2 = new $cls();
 					$obj2->hydrate($row, $startcol2);
 					sfGuardGroupPeer::addInstanceToPool($obj2, $key2);
@@ -1009,33 +1011,40 @@ abstract class BasesfGuardUserGroupPeer {
 	/**
 	 * Selects a collection of sfGuardUserGroup objects pre-filled with all related objects except sfGuardGroup.
 	 *
-	 * @param      Criteria  $c
+	 * @param      Criteria  $criteria
 	 * @param      PropelPDO $con
 	 * @param      String    $join_behavior the type of joins to use, defaults to Criteria::LEFT_JOIN
 	 * @return     array Array of sfGuardUserGroup objects.
 	 * @throws     PropelException Any exceptions caught during processing will be
 	 *		 rethrown wrapped into a PropelException.
 	 */
-	public static function doSelectJoinAllExceptsfGuardGroup(Criteria $c, $con = null, $join_behavior = Criteria::LEFT_JOIN)
+	public static function doSelectJoinAllExceptsfGuardGroup(Criteria $criteria, $con = null, $join_behavior = Criteria::LEFT_JOIN)
 	{
-		$c = clone $c;
+		$criteria = clone $criteria;
 
 		// Set the correct dbName if it has not been overridden
-		// $c->getDbName() will return the same object if not set to another value
+		// $criteria->getDbName() will return the same object if not set to another value
 		// so == check is okay and faster
-		if ($c->getDbName() == Propel::getDefaultDB()) {
-			$c->setDbName(self::DATABASE_NAME);
+		if ($criteria->getDbName() == Propel::getDefaultDB()) {
+			$criteria->setDbName(self::DATABASE_NAME);
 		}
 
-		sfGuardUserGroupPeer::addSelectColumns($c);
+		sfGuardUserGroupPeer::addSelectColumns($criteria);
 		$startcol2 = (sfGuardUserGroupPeer::NUM_COLUMNS - sfGuardUserGroupPeer::NUM_LAZY_LOAD_COLUMNS);
 
-		sfGuardUserPeer::addSelectColumns($c);
+		sfGuardUserPeer::addSelectColumns($criteria);
 		$startcol3 = $startcol2 + (sfGuardUserPeer::NUM_COLUMNS - sfGuardUserPeer::NUM_LAZY_LOAD_COLUMNS);
 
-				$c->addJoin(array(sfGuardUserGroupPeer::USER_ID,), array(sfGuardUserPeer::ID,), $join_behavior);
+		$criteria->addJoin(sfGuardUserGroupPeer::USER_ID, sfGuardUserPeer::ID, $join_behavior);
 
-		$stmt = BasePeer::doSelect($c, $con);
+		// symfony_behaviors behavior
+		foreach (sfMixer::getCallables(self::getMixerPreSelectHook(__FUNCTION__)) as $sf_hook)
+		{
+		  call_user_func($sf_hook, 'BasesfGuardUserGroupPeer', $criteria, $con);
+		}
+
+
+		$stmt = BasePeer::doSelect($criteria, $con);
 		$results = array();
 
 		while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
@@ -1045,9 +1054,8 @@ abstract class BasesfGuardUserGroupPeer {
 				// See http://propel.phpdb.org/trac/ticket/509
 				// $obj1->hydrate($row, 0, true); // rehydrate
 			} else {
-				$omClass = sfGuardUserGroupPeer::getOMClass();
+				$cls = sfGuardUserGroupPeer::getOMClass(false);
 
-				$cls = substr('.'.$omClass, strrpos('.'.$omClass, '.') + 1);
 				$obj1 = new $cls();
 				$obj1->hydrate($row);
 				sfGuardUserGroupPeer::addInstanceToPool($obj1, $key1);
@@ -1060,10 +1068,8 @@ abstract class BasesfGuardUserGroupPeer {
 					$obj2 = sfGuardUserPeer::getInstanceFromPool($key2);
 					if (!$obj2) {
 	
-						$omClass = sfGuardUserPeer::getOMClass();
+						$cls = sfGuardUserPeer::getOMClass(false);
 
-
-					$cls = substr('.'.$omClass, strrpos('.'.$omClass, '.') + 1);
 					$obj2 = new $cls();
 					$obj2->hydrate($row, $startcol2);
 					sfGuardUserPeer::addInstanceToPool($obj2, $key2);
@@ -1080,11 +1086,6 @@ abstract class BasesfGuardUserGroupPeer {
 		return $results;
 	}
 
-
-  static public function getUniqueColumnNames()
-  {
-    return array();
-  }
 	/**
 	 * Returns the TableMap related to this peer.
 	 * This method is not needed for general use but a specific application could have a need.
@@ -1098,17 +1099,31 @@ abstract class BasesfGuardUserGroupPeer {
 	}
 
 	/**
+	 * Add a TableMap instance to the database for this peer class.
+	 */
+	public static function buildTableMap()
+	{
+	  $dbMap = Propel::getDatabaseMap(BasesfGuardUserGroupPeer::DATABASE_NAME);
+	  if (!$dbMap->hasTable(BasesfGuardUserGroupPeer::TABLE_NAME))
+	  {
+	    $dbMap->addTableObject(new sfGuardUserGroupTableMap());
+	  }
+	}
+
+	/**
 	 * The class that the Peer will make instances of.
 	 *
-	 * This uses a dot-path notation which is tranalted into a path
+	 * If $withPrefix is true, the returned path
+	 * uses a dot-path notation which is tranalted into a path
 	 * relative to a location on the PHP include_path.
 	 * (e.g. path.to.MyClass -> 'path/to/MyClass.php')
 	 *
+	 * @param      boolean  Whether or not to return the path wit hthe class name 
 	 * @return     string path.to.ClassName
 	 */
-	public static function getOMClass()
+	public static function getOMClass($withPrefix = true)
 	{
-		return sfGuardUserGroupPeer::CLASS_DEFAULT;
+		return $withPrefix ? sfGuardUserGroupPeer::CLASS_DEFAULT : sfGuardUserGroupPeer::OM_CLASS;
 	}
 
 	/**
@@ -1122,16 +1137,14 @@ abstract class BasesfGuardUserGroupPeer {
 	 */
 	public static function doInsert($values, PropelPDO $con = null)
 	{
-
-    foreach (sfMixer::getCallables('BasesfGuardUserGroupPeer:doInsert:pre') as $callable)
+    // symfony_behaviors behavior
+    foreach (sfMixer::getCallables('BasesfGuardUserGroupPeer:doInsert:pre') as $sf_hook)
     {
-      $ret = call_user_func($callable, 'BasesfGuardUserGroupPeer', $values, $con);
-      if (false !== $ret)
+      if (false !== $sf_hook_retval = call_user_func($sf_hook, 'BasesfGuardUserGroupPeer', $values, $con))
       {
-        return $ret;
+        return $sf_hook_retval;
       }
     }
-
 
 		if ($con === null) {
 			$con = Propel::getConnection(sfGuardUserGroupPeer::DATABASE_NAME, Propel::CONNECTION_WRITE);
@@ -1158,13 +1171,13 @@ abstract class BasesfGuardUserGroupPeer {
 			throw $e;
 		}
 
-		
-    foreach (sfMixer::getCallables('BasesfGuardUserGroupPeer:doInsert:post') as $callable)
+    // symfony_behaviors behavior
+    foreach (sfMixer::getCallables('BasesfGuardUserGroupPeer:doInsert:post') as $sf_hook)
     {
-      call_user_func($callable, 'BasesfGuardUserGroupPeer', $values, $con, $pk);
+      call_user_func($sf_hook, 'BasesfGuardUserGroupPeer', $values, $con, $pk);
     }
 
-    return $pk;
+		return $pk;
 	}
 
 	/**
@@ -1178,16 +1191,14 @@ abstract class BasesfGuardUserGroupPeer {
 	 */
 	public static function doUpdate($values, PropelPDO $con = null)
 	{
-
-    foreach (sfMixer::getCallables('BasesfGuardUserGroupPeer:doUpdate:pre') as $callable)
+    // symfony_behaviors behavior
+    foreach (sfMixer::getCallables('BasesfGuardUserGroupPeer:doUpdate:pre') as $sf_hook)
     {
-      $ret = call_user_func($callable, 'BasesfGuardUserGroupPeer', $values, $con);
-      if (false !== $ret)
+      if (false !== $sf_hook_retval = call_user_func($sf_hook, 'BasesfGuardUserGroupPeer', $values, $con))
       {
-        return $ret;
+        return $sf_hook_retval;
       }
     }
-
 
 		if ($con === null) {
 			$con = Propel::getConnection(sfGuardUserGroupPeer::DATABASE_NAME, Propel::CONNECTION_WRITE);
@@ -1213,15 +1224,15 @@ abstract class BasesfGuardUserGroupPeer {
 		$criteria->setDbName(self::DATABASE_NAME);
 
 		$ret = BasePeer::doUpdate($selectCriteria, $criteria, $con);
-	
 
-    foreach (sfMixer::getCallables('BasesfGuardUserGroupPeer:doUpdate:post') as $callable)
+    // symfony_behaviors behavior
+    foreach (sfMixer::getCallables('BasesfGuardUserGroupPeer:doUpdate:post') as $sf_hook)
     {
-      call_user_func($callable, 'BasesfGuardUserGroupPeer', $values, $con, $ret);
+      call_user_func($sf_hook, 'BasesfGuardUserGroupPeer', $values, $con, $ret);
     }
 
     return $ret;
-  }
+	}
 
 	/**
 	 * Method to DELETE all rows from the sf_guard_user_group table.
@@ -1239,6 +1250,11 @@ abstract class BasesfGuardUserGroupPeer {
 			// for more than one table or we could emulating ON DELETE CASCADE, etc.
 			$con->beginTransaction();
 			$affectedRows += BasePeer::doDeleteAll(sfGuardUserGroupPeer::TABLE_NAME, $con);
+			// Because this db requires some delete cascade/set null emulation, we have to
+			// clear the cached instance *after* the emulation has happened (since
+			// instances get re-added by the select statement contained therein).
+			sfGuardUserGroupPeer::clearInstancePool();
+			sfGuardUserGroupPeer::clearRelatedInstancePool();
 			$con->commit();
 			return $affectedRows;
 		} catch (PropelException $e) {
@@ -1269,34 +1285,25 @@ abstract class BasesfGuardUserGroupPeer {
 			// way of knowing (without running a query) what objects should be invalidated
 			// from the cache based on this Criteria.
 			sfGuardUserGroupPeer::clearInstancePool();
-
 			// rename for clarity
 			$criteria = clone $values;
-		} elseif ($values instanceof sfGuardUserGroup) {
+		} elseif ($values instanceof sfGuardUserGroup) { // it's a model object
 			// invalidate the cache for this single object
 			sfGuardUserGroupPeer::removeInstanceFromPool($values);
 			// create criteria based on pk values
 			$criteria = $values->buildPkeyCriteria();
-		} else {
-			// it must be the primary key
-
-
-
+		} else { // it's a primary key, or an array of pks
 			$criteria = new Criteria(self::DATABASE_NAME);
 			// primary key is composite; we therefore, expect
-			// the primary key passed to be an array of pkey
-			// values
+			// the primary key passed to be an array of pkey values
 			if (count($values) == count($values, COUNT_RECURSIVE)) {
 				// array is not multi-dimensional
 				$values = array($values);
 			}
-
 			foreach ($values as $value) {
-
 				$criterion = $criteria->getNewCriterion(sfGuardUserGroupPeer::USER_ID, $value[0]);
 				$criterion->addAnd($criteria->getNewCriterion(sfGuardUserGroupPeer::GROUP_ID, $value[1]));
 				$criteria->addOr($criterion);
-
 				// we can invalidate the cache for this single PK
 				sfGuardUserGroupPeer::removeInstanceFromPool($value);
 			}
@@ -1313,7 +1320,7 @@ abstract class BasesfGuardUserGroupPeer {
 			$con->beginTransaction();
 			
 			$affectedRows += BasePeer::doDelete($criteria, $con);
-
+			sfGuardUserGroupPeer::clearRelatedInstancePool();
 			$con->commit();
 			return $affectedRows;
 		} catch (PropelException $e) {
@@ -1356,21 +1363,13 @@ abstract class BasesfGuardUserGroupPeer {
 
 		}
 
-		$res =  BasePeer::doValidate(sfGuardUserGroupPeer::DATABASE_NAME, sfGuardUserGroupPeer::TABLE_NAME, $columns);
-    if ($res !== true) {
-        foreach ($res as $failed) {
-            $col = sfGuardUserGroupPeer::translateFieldname($failed->getColumn(), BasePeer::TYPE_COLNAME, BasePeer::TYPE_PHPNAME);
-        }
-    }
-
-    return $res;
+		return BasePeer::doValidate(sfGuardUserGroupPeer::DATABASE_NAME, sfGuardUserGroupPeer::TABLE_NAME, $columns);
 	}
 
 	/**
 	 * Retrieve object using using composite pkey values.
 	 * @param      int $user_id
-	   @param      int $group_id
-	   
+	 * @param      int $group_id
 	 * @param      PropelPDO $con
 	 * @return     sfGuardUserGroup
 	 */
@@ -1390,16 +1389,42 @@ abstract class BasesfGuardUserGroupPeer {
 
 		return !empty($v) ? $v[0] : null;
 	}
+	// symfony behavior
+	
+	/**
+	 * Returns an array of arrays that contain columns in each unique index.
+	 *
+	 * @return array
+	 */
+	static public function getUniqueColumnNames()
+	{
+	  return array();
+	}
+
+	// symfony_behaviors behavior
+	
+	/**
+	 * Returns the name of the hook to call from inside the supplied method.
+	 *
+	 * @param string $method The calling method
+	 *
+	 * @return string A hook name for {@link sfMixer}
+	 *
+	 * @throws LogicException If the method name is not recognized
+	 */
+	static private function getMixerPreSelectHook($method)
+	{
+	  if (preg_match('/^do(Select|Count)(Join(All(Except)?)?|Stmt)?/', $method, $match))
+	  {
+	    return sprintf('BasesfGuardUserGroupPeer:%s:%1$s', 'Count' == $match[1] ? 'doCount' : $match[0]);
+	  }
+	
+	  throw new LogicException(sprintf('Unrecognized function "%s"', $method));
+	}
+
 } // BasesfGuardUserGroupPeer
 
-// This is the static code needed to register the MapBuilder for this table with the main Propel class.
+// This is the static code needed to register the TableMap for this table with the main Propel class.
 //
-// NOTE: This static code cannot call methods on the sfGuardUserGroupPeer class, because it is not defined yet.
-// If you need to use overridden methods, you can add this code to the bottom of the sfGuardUserGroupPeer class:
-//
-// Propel::getDatabaseMap(sfGuardUserGroupPeer::DATABASE_NAME)->addTableBuilder(sfGuardUserGroupPeer::TABLE_NAME, sfGuardUserGroupPeer::getMapBuilder());
-//
-// Doing so will effectively overwrite the registration below.
-
-Propel::getDatabaseMap(BasesfGuardUserGroupPeer::DATABASE_NAME)->addTableBuilder(BasesfGuardUserGroupPeer::TABLE_NAME, BasesfGuardUserGroupPeer::getMapBuilder());
+BasesfGuardUserGroupPeer::buildTableMap();
 

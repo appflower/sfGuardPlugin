@@ -15,9 +15,15 @@ abstract class BasesfGuardGroupPeer {
 	/** the table name for this class */
 	const TABLE_NAME = 'sf_guard_group';
 
+	/** the related Propel class for this table */
+	const OM_CLASS = 'sfGuardGroup';
+
 	/** A class that can be returned by this peer. */
 	const CLASS_DEFAULT = 'plugins.sfGuardPlugin.lib.model.sfGuardGroup';
 
+	/** the related TableMap class for this table */
+	const TM_CLASS = 'sfGuardGroupTableMap';
+	
 	/** The total number of columns. */
 	const NUM_COLUMNS = 3;
 
@@ -41,11 +47,13 @@ abstract class BasesfGuardGroupPeer {
 	 */
 	public static $instances = array();
 
+
+	// symfony behavior
+	
 	/**
-	 * The MapBuilder instance for this peer.
-	 * @var        MapBuilder
+	 * Indicates whether the current model includes I18N.
 	 */
-	private static $mapBuilder = null;
+	const IS_I18N = false;
 
 	/**
 	 * holds an array of fieldnames
@@ -75,17 +83,6 @@ abstract class BasesfGuardGroupPeer {
 		BasePeer::TYPE_NUM => array (0, 1, 2, )
 	);
 
-	/**
-	 * Get a (singleton) instance of the MapBuilder for this peer class.
-	 * @return     MapBuilder The map builder for this peer
-	 */
-	public static function getMapBuilder()
-	{
-		if (self::$mapBuilder === null) {
-			self::$mapBuilder = new sfGuardGroupMapBuilder();
-		}
-		return self::$mapBuilder;
-	}
 	/**
 	 * Translates a fieldname to another type
 	 *
@@ -153,13 +150,9 @@ abstract class BasesfGuardGroupPeer {
 	 */
 	public static function addSelectColumns(Criteria $criteria)
 	{
-
 		$criteria->addSelectColumn(sfGuardGroupPeer::ID);
-
 		$criteria->addSelectColumn(sfGuardGroupPeer::NAME);
-
 		$criteria->addSelectColumn(sfGuardGroupPeer::DESCRIPTION);
-
 	}
 
 	/**
@@ -194,13 +187,11 @@ abstract class BasesfGuardGroupPeer {
 		if ($con === null) {
 			$con = Propel::getConnection(sfGuardGroupPeer::DATABASE_NAME, Propel::CONNECTION_READ);
 		}
-
-
-    foreach (sfMixer::getCallables('BasesfGuardGroupPeer:doCount:doCount') as $callable)
-    {
-      call_user_func($callable, 'BasesfGuardGroupPeer', $criteria, $con);
-    }
-
+		// symfony_behaviors behavior
+		foreach (sfMixer::getCallables(self::getMixerPreSelectHook(__FUNCTION__)) as $sf_hook)
+		{
+		  call_user_func($sf_hook, 'BasesfGuardGroupPeer', $criteria, $con);
+		}
 
 		// BasePeer returns a PDOStatement
 		$stmt = BasePeer::doCount($criteria, $con);
@@ -260,13 +251,6 @@ abstract class BasesfGuardGroupPeer {
 	 */
 	public static function doSelectStmt(Criteria $criteria, PropelPDO $con = null)
 	{
-
-    foreach (sfMixer::getCallables('BasesfGuardGroupPeer:doSelectStmt:doSelectStmt') as $callable)
-    {
-      call_user_func($callable, 'BasesfGuardGroupPeer', $criteria, $con);
-    }
-
-
 		if ($con === null) {
 			$con = Propel::getConnection(sfGuardGroupPeer::DATABASE_NAME, Propel::CONNECTION_READ);
 		}
@@ -278,6 +262,12 @@ abstract class BasesfGuardGroupPeer {
 
 		// Set the correct dbName
 		$criteria->setDbName(self::DATABASE_NAME);
+		// symfony_behaviors behavior
+		foreach (sfMixer::getCallables(self::getMixerPreSelectHook(__FUNCTION__)) as $sf_hook)
+		{
+		  call_user_func($sf_hook, 'BasesfGuardGroupPeer', $criteria, $con);
+		}
+
 
 		// BasePeer returns a PDOStatement
 		return BasePeer::doSelect($criteria, $con);
@@ -362,6 +352,23 @@ abstract class BasesfGuardGroupPeer {
 	}
 	
 	/**
+	 * Method to invalidate the instance pool of all tables related to sf_guard_group
+	 * by a foreign key with ON DELETE CASCADE
+	 */
+	public static function clearRelatedInstancePool()
+	{
+		// invalidate objects in sfGuardGroupPermissionPeer instance pool, since one or more of them may be deleted by ON DELETE CASCADE rule.
+		sfGuardGroupPermissionPeer::clearInstancePool();
+
+		// invalidate objects in sfGuardUserGroupPeer instance pool, since one or more of them may be deleted by ON DELETE CASCADE rule.
+		sfGuardUserGroupPeer::clearInstancePool();
+
+		// invalidate objects in ProjectUserPeer instance pool, since one or more of them may be deleted by ON DELETE CASCADE rule.
+		ProjectUserPeer::clearInstancePool();
+
+	}
+
+	/**
 	 * Retrieves a string version of the primary key from the DB resultset row that can be used to uniquely identify a row in this table.
 	 *
 	 * For tables with a single-column primary key, that simple pkey value will be returned.  For tables with
@@ -374,10 +381,10 @@ abstract class BasesfGuardGroupPeer {
 	public static function getPrimaryKeyHashFromRow($row, $startcol = 0)
 	{
 		// If the PK cannot be derived from the row, return NULL.
-		if ($row[$startcol + 0] === null) {
+		if ($row[$startcol] === null) {
 			return null;
 		}
-		return (string) $row[$startcol + 0];
+		return (string) $row[$startcol];
 	}
 
 	/**
@@ -392,8 +399,7 @@ abstract class BasesfGuardGroupPeer {
 		$results = array();
 	
 		// set the class once to avoid overhead in the loop
-		$cls = sfGuardGroupPeer::getOMClass();
-		$cls = substr('.'.$cls, strrpos('.'.$cls, '.') + 1);
+		$cls = sfGuardGroupPeer::getOMClass(false);
 		// populate the object(s)
 		while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
 			$key = sfGuardGroupPeer::getPrimaryKeyHashFromRow($row, 0);
@@ -403,7 +409,6 @@ abstract class BasesfGuardGroupPeer {
 				// $obj->hydrate($row, 0, true); // rehydrate
 				$results[] = $obj;
 			} else {
-		
 				$obj = new $cls();
 				$obj->hydrate($row);
 				$results[] = $obj;
@@ -413,11 +418,6 @@ abstract class BasesfGuardGroupPeer {
 		$stmt->closeCursor();
 		return $results;
 	}
-
-  static public function getUniqueColumnNames()
-  {
-    return array(array('name'));
-  }
 	/**
 	 * Returns the TableMap related to this peer.
 	 * This method is not needed for general use but a specific application could have a need.
@@ -431,17 +431,31 @@ abstract class BasesfGuardGroupPeer {
 	}
 
 	/**
+	 * Add a TableMap instance to the database for this peer class.
+	 */
+	public static function buildTableMap()
+	{
+	  $dbMap = Propel::getDatabaseMap(BasesfGuardGroupPeer::DATABASE_NAME);
+	  if (!$dbMap->hasTable(BasesfGuardGroupPeer::TABLE_NAME))
+	  {
+	    $dbMap->addTableObject(new sfGuardGroupTableMap());
+	  }
+	}
+
+	/**
 	 * The class that the Peer will make instances of.
 	 *
-	 * This uses a dot-path notation which is tranalted into a path
+	 * If $withPrefix is true, the returned path
+	 * uses a dot-path notation which is tranalted into a path
 	 * relative to a location on the PHP include_path.
 	 * (e.g. path.to.MyClass -> 'path/to/MyClass.php')
 	 *
+	 * @param      boolean  Whether or not to return the path wit hthe class name 
 	 * @return     string path.to.ClassName
 	 */
-	public static function getOMClass()
+	public static function getOMClass($withPrefix = true)
 	{
-		return sfGuardGroupPeer::CLASS_DEFAULT;
+		return $withPrefix ? sfGuardGroupPeer::CLASS_DEFAULT : sfGuardGroupPeer::OM_CLASS;
 	}
 
 	/**
@@ -455,16 +469,14 @@ abstract class BasesfGuardGroupPeer {
 	 */
 	public static function doInsert($values, PropelPDO $con = null)
 	{
-
-    foreach (sfMixer::getCallables('BasesfGuardGroupPeer:doInsert:pre') as $callable)
+    // symfony_behaviors behavior
+    foreach (sfMixer::getCallables('BasesfGuardGroupPeer:doInsert:pre') as $sf_hook)
     {
-      $ret = call_user_func($callable, 'BasesfGuardGroupPeer', $values, $con);
-      if (false !== $ret)
+      if (false !== $sf_hook_retval = call_user_func($sf_hook, 'BasesfGuardGroupPeer', $values, $con))
       {
-        return $ret;
+        return $sf_hook_retval;
       }
     }
-
 
 		if ($con === null) {
 			$con = Propel::getConnection(sfGuardGroupPeer::DATABASE_NAME, Propel::CONNECTION_WRITE);
@@ -495,13 +507,13 @@ abstract class BasesfGuardGroupPeer {
 			throw $e;
 		}
 
-		
-    foreach (sfMixer::getCallables('BasesfGuardGroupPeer:doInsert:post') as $callable)
+    // symfony_behaviors behavior
+    foreach (sfMixer::getCallables('BasesfGuardGroupPeer:doInsert:post') as $sf_hook)
     {
-      call_user_func($callable, 'BasesfGuardGroupPeer', $values, $con, $pk);
+      call_user_func($sf_hook, 'BasesfGuardGroupPeer', $values, $con, $pk);
     }
 
-    return $pk;
+		return $pk;
 	}
 
 	/**
@@ -515,16 +527,14 @@ abstract class BasesfGuardGroupPeer {
 	 */
 	public static function doUpdate($values, PropelPDO $con = null)
 	{
-
-    foreach (sfMixer::getCallables('BasesfGuardGroupPeer:doUpdate:pre') as $callable)
+    // symfony_behaviors behavior
+    foreach (sfMixer::getCallables('BasesfGuardGroupPeer:doUpdate:pre') as $sf_hook)
     {
-      $ret = call_user_func($callable, 'BasesfGuardGroupPeer', $values, $con);
-      if (false !== $ret)
+      if (false !== $sf_hook_retval = call_user_func($sf_hook, 'BasesfGuardGroupPeer', $values, $con))
       {
-        return $ret;
+        return $sf_hook_retval;
       }
     }
-
 
 		if ($con === null) {
 			$con = Propel::getConnection(sfGuardGroupPeer::DATABASE_NAME, Propel::CONNECTION_WRITE);
@@ -547,15 +557,15 @@ abstract class BasesfGuardGroupPeer {
 		$criteria->setDbName(self::DATABASE_NAME);
 
 		$ret = BasePeer::doUpdate($selectCriteria, $criteria, $con);
-	
 
-    foreach (sfMixer::getCallables('BasesfGuardGroupPeer:doUpdate:post') as $callable)
+    // symfony_behaviors behavior
+    foreach (sfMixer::getCallables('BasesfGuardGroupPeer:doUpdate:post') as $sf_hook)
     {
-      call_user_func($callable, 'BasesfGuardGroupPeer', $values, $con, $ret);
+      call_user_func($sf_hook, 'BasesfGuardGroupPeer', $values, $con, $ret);
     }
 
     return $ret;
-  }
+	}
 
 	/**
 	 * Method to DELETE all rows from the sf_guard_group table.
@@ -573,7 +583,13 @@ abstract class BasesfGuardGroupPeer {
 			// for more than one table or we could emulating ON DELETE CASCADE, etc.
 			$con->beginTransaction();
 			$affectedRows += sfGuardGroupPeer::doOnDeleteCascade(new Criteria(sfGuardGroupPeer::DATABASE_NAME), $con);
+			sfGuardGroupPeer::doOnDeleteSetNull(new Criteria(sfGuardGroupPeer::DATABASE_NAME), $con);
 			$affectedRows += BasePeer::doDeleteAll(sfGuardGroupPeer::TABLE_NAME, $con);
+			// Because this db requires some delete cascade/set null emulation, we have to
+			// clear the cached instance *after* the emulation has happened (since
+			// instances get re-added by the select statement contained therein).
+			sfGuardGroupPeer::clearInstancePool();
+			sfGuardGroupPeer::clearRelatedInstancePool();
 			$con->commit();
 			return $affectedRows;
 		} catch (PropelException $e) {
@@ -600,30 +616,14 @@ abstract class BasesfGuardGroupPeer {
 		}
 
 		if ($values instanceof Criteria) {
-			// invalidate the cache for all objects of this type, since we have no
-			// way of knowing (without running a query) what objects should be invalidated
-			// from the cache based on this Criteria.
-			sfGuardGroupPeer::clearInstancePool();
-
 			// rename for clarity
 			$criteria = clone $values;
-		} elseif ($values instanceof sfGuardGroup) {
-			// invalidate the cache for this single object
-			sfGuardGroupPeer::removeInstanceFromPool($values);
+		} elseif ($values instanceof sfGuardGroup) { // it's a model object
 			// create criteria based on pk values
 			$criteria = $values->buildPkeyCriteria();
-		} else {
-			// it must be the primary key
-
-
-
+		} else { // it's a primary key, or an array of pks
 			$criteria = new Criteria(self::DATABASE_NAME);
 			$criteria->add(sfGuardGroupPeer::ID, (array) $values, Criteria::IN);
-
-			foreach ((array) $values as $singleval) {
-				// we can invalidate the cache for this single object
-				sfGuardGroupPeer::removeInstanceFromPool($singleval);
-			}
 		}
 
 		// Set the correct dbName
@@ -636,24 +636,23 @@ abstract class BasesfGuardGroupPeer {
 			// for more than one table or we could emulating ON DELETE CASCADE, etc.
 			$con->beginTransaction();
 			$affectedRows += sfGuardGroupPeer::doOnDeleteCascade($criteria, $con);
+			sfGuardGroupPeer::doOnDeleteSetNull($criteria, $con);
 			
-				// Because this db requires some delete cascade/set null emulation, we have to
-				// clear the cached instance *after* the emulation has happened (since
-				// instances get re-added by the select statement contained therein).
-				if ($values instanceof Criteria) {
-					sfGuardGroupPeer::clearInstancePool();
-				} else { // it's a PK or object
-					sfGuardGroupPeer::removeInstanceFromPool($values);
+			// Because this db requires some delete cascade/set null emulation, we have to
+			// clear the cached instance *after* the emulation has happened (since
+			// instances get re-added by the select statement contained therein).
+			if ($values instanceof Criteria) {
+				sfGuardGroupPeer::clearInstancePool();
+			} elseif ($values instanceof sfGuardGroup) { // it's a model object
+				sfGuardGroupPeer::removeInstanceFromPool($values);
+			} else { // it's a primary key, or an array of pks
+				foreach ((array) $values as $singleval) {
+					sfGuardGroupPeer::removeInstanceFromPool($singleval);
 				}
+			}
 			
 			$affectedRows += BasePeer::doDelete($criteria, $con);
-
-			// invalidate objects in sfGuardGroupPermissionPeer instance pool, since one or more of them may be deleted by ON DELETE CASCADE rule.
-			sfGuardGroupPermissionPeer::clearInstancePool();
-
-			// invalidate objects in sfGuardUserGroupPeer instance pool, since one or more of them may be deleted by ON DELETE CASCADE rule.
-			sfGuardUserGroupPeer::clearInstancePool();
-
+			sfGuardGroupPeer::clearRelatedInstancePool();
 			$con->commit();
 			return $affectedRows;
 		} catch (PropelException $e) {
@@ -686,18 +685,49 @@ abstract class BasesfGuardGroupPeer {
 
 
 			// delete related sfGuardGroupPermission objects
-			$c = new Criteria(sfGuardGroupPermissionPeer::DATABASE_NAME);
+			$criteria = new Criteria(sfGuardGroupPermissionPeer::DATABASE_NAME);
 			
-			$c->add(sfGuardGroupPermissionPeer::GROUP_ID, $obj->getId());
-			$affectedRows += sfGuardGroupPermissionPeer::doDelete($c, $con);
+			$criteria->add(sfGuardGroupPermissionPeer::GROUP_ID, $obj->getId());
+			$affectedRows += sfGuardGroupPermissionPeer::doDelete($criteria, $con);
 
 			// delete related sfGuardUserGroup objects
-			$c = new Criteria(sfGuardUserGroupPeer::DATABASE_NAME);
+			$criteria = new Criteria(sfGuardUserGroupPeer::DATABASE_NAME);
 			
-			$c->add(sfGuardUserGroupPeer::GROUP_ID, $obj->getId());
-			$affectedRows += sfGuardUserGroupPeer::doDelete($c, $con);
+			$criteria->add(sfGuardUserGroupPeer::GROUP_ID, $obj->getId());
+			$affectedRows += sfGuardUserGroupPeer::doDelete($criteria, $con);
 		}
 		return $affectedRows;
+	}
+
+	/**
+	 * This is a method for emulating ON DELETE SET NULL DBs that don't support this
+	 * feature (like MySQL or SQLite).
+	 *
+	 * This method is not very speedy because it must perform a query first to get
+	 * the implicated records and then perform the deletes by calling those Peer classes.
+	 *
+	 * This method should be used within a transaction if possible.
+	 *
+	 * @param      Criteria $criteria
+	 * @param      PropelPDO $con
+	 * @return     void
+	 */
+	protected static function doOnDeleteSetNull(Criteria $criteria, PropelPDO $con)
+	{
+
+		// first find the objects that are implicated by the $criteria
+		$objects = sfGuardGroupPeer::doSelect($criteria, $con);
+		foreach ($objects as $obj) {
+
+			// set fkey col in related ProjectUser rows to NULL
+			$selectCriteria = new Criteria(sfGuardGroupPeer::DATABASE_NAME);
+			$updateValues = new Criteria(sfGuardGroupPeer::DATABASE_NAME);
+			$selectCriteria->add(ProjectUserPeer::SF_GUARD_GROUP_ID, $obj->getId());
+			$updateValues->add(ProjectUserPeer::SF_GUARD_GROUP_ID, null);
+
+					BasePeer::doUpdate($selectCriteria, $updateValues, $con); // use BasePeer because generated Peer doUpdate() methods only update using pkey
+
+		}
 	}
 
 	/**
@@ -734,14 +764,7 @@ abstract class BasesfGuardGroupPeer {
 
 		}
 
-		$res =  BasePeer::doValidate(sfGuardGroupPeer::DATABASE_NAME, sfGuardGroupPeer::TABLE_NAME, $columns);
-    if ($res !== true) {
-        foreach ($res as $failed) {
-            $col = sfGuardGroupPeer::translateFieldname($failed->getColumn(), BasePeer::TYPE_COLNAME, BasePeer::TYPE_PHPNAME);
-        }
-    }
-
-    return $res;
+		return BasePeer::doValidate(sfGuardGroupPeer::DATABASE_NAME, sfGuardGroupPeer::TABLE_NAME, $columns);
 	}
 
 	/**
@@ -795,16 +818,42 @@ abstract class BasesfGuardGroupPeer {
 		return $objs;
 	}
 
+	// symfony behavior
+	
+	/**
+	 * Returns an array of arrays that contain columns in each unique index.
+	 *
+	 * @return array
+	 */
+	static public function getUniqueColumnNames()
+	{
+	  return array(array('name'));
+	}
+
+	// symfony_behaviors behavior
+	
+	/**
+	 * Returns the name of the hook to call from inside the supplied method.
+	 *
+	 * @param string $method The calling method
+	 *
+	 * @return string A hook name for {@link sfMixer}
+	 *
+	 * @throws LogicException If the method name is not recognized
+	 */
+	static private function getMixerPreSelectHook($method)
+	{
+	  if (preg_match('/^do(Select|Count)(Join(All(Except)?)?|Stmt)?/', $method, $match))
+	  {
+	    return sprintf('BasesfGuardGroupPeer:%s:%1$s', 'Count' == $match[1] ? 'doCount' : $match[0]);
+	  }
+	
+	  throw new LogicException(sprintf('Unrecognized function "%s"', $method));
+	}
+
 } // BasesfGuardGroupPeer
 
-// This is the static code needed to register the MapBuilder for this table with the main Propel class.
+// This is the static code needed to register the TableMap for this table with the main Propel class.
 //
-// NOTE: This static code cannot call methods on the sfGuardGroupPeer class, because it is not defined yet.
-// If you need to use overridden methods, you can add this code to the bottom of the sfGuardGroupPeer class:
-//
-// Propel::getDatabaseMap(sfGuardGroupPeer::DATABASE_NAME)->addTableBuilder(sfGuardGroupPeer::TABLE_NAME, sfGuardGroupPeer::getMapBuilder());
-//
-// Doing so will effectively overwrite the registration below.
-
-Propel::getDatabaseMap(BasesfGuardGroupPeer::DATABASE_NAME)->addTableBuilder(BasesfGuardGroupPeer::TABLE_NAME, BasesfGuardGroupPeer::getMapBuilder());
+BasesfGuardGroupPeer::buildTableMap();
 
