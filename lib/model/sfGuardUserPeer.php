@@ -200,13 +200,13 @@ class sfGuardUserPeer extends PluginsfGuardUserPeer
 				$options[$obj->getUsername()]=$obj->getName();
 			}
 		}
-	  
+
 		$selected = array();
 		if($ticket_id!=null) {
 			$emails = explode(',', $ticketObj->getEmailCc());
 		}
 
-		if(is_array($emails))
+		if(isset($emails) && is_array($emails))
 		{
 			foreach($emails as $email)
 			{
