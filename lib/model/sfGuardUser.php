@@ -37,7 +37,7 @@ class sfGuardUser extends PluginsfGuardUser {
     }
 
     public function getHtmlStatus() {
-        sfProjectConfiguration::getActive()->loadHelpers(array("Url", "Tag", "Asset", "Javascript"));
+        sfProjectConfiguration::getActive()->loadHelpers(array("Url", "Tag", "Asset"/*, "Javascript"*/));
         if ($this->getIsActive()) {
             return image_tag('famfamfam/user_green', array('title' => 'User is active'));
         }
