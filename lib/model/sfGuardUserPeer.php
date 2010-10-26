@@ -17,9 +17,14 @@
  */
 class sfGuardUserPeer extends PluginsfGuardUserPeer
 {
-	public static function getAll()
+	public static function getAll($user_id=null)
 	{
-		$objects=self::doSelect(new Criteria());
+		$c = new Criteria();
+		$c->add(self::IS_ACTIVE, true);
+		if($user_id)
+			$c->addOr(self::ID, $user_id);
+		$a = $c->toString();
+		$objects=self::doSelect($c);
 
 		if($objects!=null)
 		{
@@ -187,10 +192,10 @@ class sfGuardUserPeer extends PluginsfGuardUserPeer
 		}
 		
 		$c = new Criteria();
+		$c->add(self::IS_ACTIVE, true);
 		if($ticket_id!=null) {
 			$c->add(self::ID, array($ticketObj->getUserId(), $ticketObj->getOwnerId()), Criteria::NOT_IN);
 		}
-		$a = $c->toString();
 		$objs=self::doSelect($c);
 		$options=array();
 		if($objs!=null)
