@@ -195,6 +195,10 @@ class sfGuardUserPeer extends PluginsfGuardUserPeer
 		$c->add(self::IS_ACTIVE, true);
 		if($ticket_id!=null) {
 			$c->add(self::ID, array($ticketObj->getUserId(), $ticketObj->getOwnerId()), Criteria::NOT_IN);
+			// when editing ticket filter user by project permission
+			$c->addJoin(sfGuardUserPeer::ID, ProjectUserPeer::USER_ID, Criteria::INNER_JOIN);
+			$c->add(ProjectUserPeer::PROJECT_ID, $ticketObj->getTicketMilestone()->getProjectId());
+			$c->addJoin(sfGuardUserPeer::ID, ProjectPermissionPeer::USER_ID, Criteria::INNER_JOIN);
 		}
 		$objs=self::doSelect($c);
 		$options=array();
