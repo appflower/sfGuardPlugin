@@ -1,5 +1,5 @@
 <?php
-class sfGuardUser extends PluginsfGuardUser {
+class sfGuardUser extends PluginsfGuardUser implements AppFlowerUser {
     public function __toString() {
         return $this->getFirstName() . ' ' . $this->getLastName();
     }
@@ -112,5 +112,20 @@ class sfGuardUser extends PluginsfGuardUser {
         $conf = frontendConfiguration::getActive();
         $baseUploadDir = $conf->getWebUploadDir();
         return "{$baseUploadDir}user/";
+    }
+
+    function isWidgetHelpEnabled()
+    {
+        return $this->getProfile()->getWidgetHelpIsEnabled();
+    }
+
+    function getFullname()
+    {
+        return $this->getProfile()->getFullname();
+    }
+
+    function isAnonymous()
+    {
+        return false;
     }
 }
