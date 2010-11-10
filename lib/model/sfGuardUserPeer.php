@@ -210,6 +210,8 @@ class sfGuardUserPeer extends PluginsfGuardUserPeer
 			}
 		}
 
+        sort($options);
+
 		$selected = array();
 		if($ticket_id!=null) {
 			$emails = explode(',', $ticketObj->getEmailCc());
@@ -226,7 +228,9 @@ class sfGuardUserPeer extends PluginsfGuardUserPeer
 				}
 			}
 		}
-	  
+
+        sort($selected);
+
 		return array($options,$selected);
 	}
 	
