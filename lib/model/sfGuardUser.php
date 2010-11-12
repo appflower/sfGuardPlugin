@@ -128,4 +128,11 @@ class sfGuardUser extends PluginsfGuardUser implements AppFlowerUser {
     {
         return false;
     }
+    
+	public function getNumberClosedTickets() {
+    	$c = new Criteria();
+    	$c->add(TicketPeer::USER_ID, $this->getId());
+    	TicketPeer::getClosedTickets($c);
+    	return TicketPeer::doCount($c);
+    }
 }
